@@ -4,4 +4,5 @@ python:
 install:
   - python3 -m pip install .
 script:
+  - python3 --version
   - python3 examples/readme_examples.py
