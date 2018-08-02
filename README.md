@@ -14,7 +14,7 @@ undictify
 
 Table of contents
 -----------------
-  * [Introduction](#introduction)
+  * [Motivation](#motivation)
   * [Details](#details)
   * [Requirements and Installation](#requirements-and-installation)
 
@@ -121,7 +121,7 @@ It also supports:
 Details
 -------
 
-Undictify achieves the feat mentioned in the [introduction](#introduction) by `inspect`ing the types of the constructor parameters of the target class, instead of checking the actual members.
+Undictify achieves the feat mentioned in the [motivation](#motivation) by `inspect`ing the types of the constructor parameters of the target class, instead of checking the actual members.
 
 This allows classes to not only be plain data structures, but to do stuff with the valued given to them:
 ```python
