@@ -169,11 +169,19 @@ but `http://.../foo?some_int=four&some_str=hi` would raise an appropriate `TypeE
 Requirements and Installation
 -----------------------------
 
+
+You need Python 3.6 or higher.
+
 ```bash
 python3 -m pip install undictify
 ```
 
-You need Python 3.6 or higher.
+Or, if you like to use latest version from this repository:
+```bash
+git clone https://github.com/Dobiasd/undictify
+cd undictify
+python3 -m pip install .
+```
 
 
 License
