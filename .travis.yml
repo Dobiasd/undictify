@@ -1,0 +1,7 @@
+language: python
+python:
+  - "3.6"
+install:
+  - sudo pip install .
+script:
+  - python examples/readme_examples.py
