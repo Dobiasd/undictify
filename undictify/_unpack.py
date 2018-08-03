@@ -95,8 +95,8 @@ def __get_value(target_type: Type[TypeT], value: Any,
                     return __get_optional_type(target_type)(value)
                 return target_type(value)  # type: ignore
             raise TypeError(f'Key {log_name} has incorrect type: '
-                            f'{json_type.__name__} instead of '
-                            f'{target_type.__name__}.')
+                            f'{__get_type_name(json_type)} instead of '
+                            f'{__get_type_name(target_type)}.')
 
     return value
 
@@ -133,15 +133,26 @@ def __is_dict_type(the_type: Type[TypeT]) -> bool:
 
 
 def __get_union_types(union_type: Type[TypeT]) -> List[Type[Any]]:
+    """Return all types a Union can hold."""
     assert __is_union_type(union_type)
     return union_type.__args__  # type: ignore
 
 
 def __get_optional_type(optional_type: Type[TypeT]) -> Type[Any]:
+    """Return the type an Optional can hold."""
     assert __is_optional_type(optional_type)
     args = optional_type.__args__  # type: ignore
     assert len(args) == 2
     return args[0]  # type: ignore
+
+
+def __get_type_name(the_type: Type[TypeT]) -> str:
+    """Return a printable name of a type."""
+    if __is_optional_type(the_type):
+        return f'Optional[{str(__get_optional_type(the_type).__name__)}]'
+    if __is_list_type(the_type):
+        return f'List[{str(__get_list_type_elem_type(the_type).__name__)}]'
+    return the_type.__name__
 
 
 def __get_list_type_elem_type(list_type: Type[TypeT]) -> Type[TypeT]:
@@ -267,6 +278,13 @@ class TestUnpackingFoo(unittest.TestCase):  # pylint: disable=too-many-public-me
         a_foo = unpack_json(target_func, object_repr, True)
         self.check_result(a_foo, 10, 3.0, '5')
 
+    def do_test_wrong_opt_type(self, target_func: Callable[..., TypeT]) -> None:
+        """Valid JSON string."""
+        object_repr = '{"val": 42, "msg": "hello", "frac": 3.14, ' \
+                      '"flag": true, "opt": 10.1}'
+        with self.assertRaises(TypeError):
+            unpack_json(target_func, object_repr)
+
     def do_test_convert_error(self, target_func: Callable[..., TypeT]) -> None:
         """Valid JSON string."""
         object_repr = '{"val": "twentyfour", "msg": "hello", "frac": 3.14, ' \
@@ -328,6 +346,12 @@ class TestUnpackingFoo(unittest.TestCase):  # pylint: disable=too-many-public-me
         self.do_test_convert_ok(Foo)
         self.do_test_convert_ok(FooNamedTuple)
         self.do_test_convert_ok(foo_function)
+
+    def test_wrong_opt_type(self) -> None:
+        """Valid JSON string with an additional field."""
+        self.do_test_wrong_opt_type(Foo)
+        self.do_test_wrong_opt_type(FooNamedTuple)
+        self.do_test_wrong_opt_type(foo_function)
 
     def test_convert_error(self) -> None:
         """Valid JSON string with an additional field."""
