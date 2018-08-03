@@ -1,6 +1,10 @@
 language: python
-python:
-  - "3.6-dev"
+matrix:
+  include:
+  - name: "3.6 Unit Test"
+    python: "3.6-dev"
+  - name: "3.7 Unit Test"
+    python: "3.7-dev"
 install:
   - python3 -m pip install .
 script:
