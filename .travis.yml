@@ -3,8 +3,8 @@ matrix:
   include:
   - name: "3.6 Unit Test"
     python: "3.6-dev"
-  - name: "3.7 Unit Test"
-    python: "3.7-dev"
+#  - name: "3.7 Unit Test"
+#    python: "3.7-dev"
 install:
   - python3 -m pip install pylint
   - python3 -m pip install mypy
