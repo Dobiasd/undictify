@@ -115,7 +115,7 @@ It throws exceptions with meaningful details in their associated values in case 
 
 It also supports:
 - optional values being omitted instead of being `None` explicitly
-- skipping superfluous fields in the source dict
+- skipping superfluous fields in the source dict, i.e., fields that are not present in the target
 
 
 Details
