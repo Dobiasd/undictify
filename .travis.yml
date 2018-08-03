@@ -6,7 +6,12 @@ matrix:
   - name: "3.7 Unit Test"
     python: "3.7-dev"
 install:
+  - python3 -m pip install pylint
+  - python3 -m pip install mypy
   - python3 -m pip install .
+  - pylint ./undictify/_unpack.py
+  - mypy --strict ./undictify/_unpack.py
+  - python3 -m unittest ./undictify/_unpack.py
 script:
   - python3 --version
   - python3 examples/readme_examples.py
