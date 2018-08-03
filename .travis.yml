@@ -11,7 +11,7 @@ install:
   - python3 -m pip install .
   - pylint ./undictify/_unpack.py
   - mypy --strict ./undictify/_unpack.py
-  - python3 -m unittest ./undictify/_unpack.py
+  - cd undictify && python3 -m unittest _unpack.py && cd ..
 script:
   - python3 --version
   - python3 examples/readme_examples.py
