@@ -104,8 +104,8 @@ But now you have to manually adjust the schema every time your entity structure 
 
 This is where undictify comes into play:
 ```python
-from undictify import unpack_json
-tobi: Human = unpack_json(Human, json.loads(...))
+from undictify import unpack_dict
+tobi: Human = unpack_dict(Human, json.loads(...))
 ```
 
 It uses the type information of your target class to safely unpack the dictionary into an object.
@@ -143,7 +143,7 @@ So it resembles something like a type-safe version of `**kwargs`.
 def process(some_int: int, some_str: str) -> None:
     pass
 
-result = undictify.unpack_json(process, '{"some_int": 42, "some_str": "foo"}')
+result = undictify.unpack_dict(process, {'some_int': 42, 'some_str': 'foo'})
 ```
 
 It also supports valid type conversions, if you explicitly set its `convert_types` parameter to `True`.
