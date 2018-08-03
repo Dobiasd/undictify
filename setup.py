@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="undictify",
-    version="0.1.0",
+    version="0.1.1",
     author="Tobias Hermann",
     author_email="editgym@gmail.com",
     description="Type-safe dictionary unpacking / JSON deserialization",
