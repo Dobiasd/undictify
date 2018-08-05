@@ -1,18 +1,79 @@
 """
-undictify - Type-safe dictionary unpacking / JSON deserialization
+undictify - tests
 """
 
 import json
 import unittest
-from typing import Any, Callable, Dict, List, NamedTuple, Optional, Union
+from typing import Any, Callable, Dict, List, NamedTuple, Optional, Union, Tuple
 from typing import TypeVar
 
-from ._unpack import unpack_dict, unpack_json
+from ._unpack import type_checked_apply, type_checked_apply_convert
+from ._unpack import type_checked_apply_skip, type_checked_apply_skip_convert
+from ._unpack import type_checked_call, type_checked_call_convert
+from ._unpack import type_checked_call_skip, type_checked_call_skip_convert
 
 TypeT = TypeVar('TypeT')
 
 
+class WithTwoMembers(NamedTuple):  # pylint: disable=too-few-public-methods
+    """Some dummy class as a NamedTuple."""
+    val: int
+    msg: str
+
+
+def create_with_two_members(val: int, msg: str) -> WithTwoMembers:
+    """Some dummy function. Forwarding to class for value storage."""
+    return WithTwoMembers(val, msg)
+
+
+class TestArgsCalls(unittest.TestCase):  # pylint: disable=too-many-public-methods
+    """Tests function calls with positional and keywords arguments."""
+
+    def check_result(self, the_obj: WithTwoMembers) -> None:
+        """Validate content of WithTwoMembers's members."""
+        self.assertEqual(the_obj.val, 42)
+        self.assertEqual(the_obj.msg, 'hello')
+
+    def test_foo_function_positional(self) -> None:
+        """Positional arguments only."""
+        result: WithTwoMembers = type_checked_apply(create_with_two_members,
+                                                    42, 'hello')
+        self.check_result(result)
+
+    def test_foo_function_keyword(self) -> None:
+        """Keyword arguments only."""
+        result: WithTwoMembers = type_checked_apply(create_with_two_members,
+                                                    val=42, msg='hello')
+        self.check_result(result)
+
+    def test_foo_function_positional_and_keyword(self) -> None:  # pylint: disable=invalid-name
+        """Positional and keyword arguments."""
+        result: WithTwoMembers = type_checked_apply(create_with_two_members,
+                                                    42, **{'msg': 'hello'})
+        self.check_result(result)
+
+    def test_foo_function_positional_and_keyword_duplicates(self) -> None:  # pylint: disable=invalid-name
+        """Invalid (overlapping) combination of
+        positional arguments and keyword arguments."""
+        with self.assertRaises(ValueError):
+            type_checked_apply(create_with_two_members, 42, 'hello', val=42)
+
+
 class Foo:  # pylint: disable=too-few-public-methods
+    """Some dummy class."""
+
+    def __init__(self,  # pylint: disable=too-many-arguments,line-too-long
+                 val: int, msg: str, flag: bool, opt: Optional[int],
+                 frac: float = 1.23) -> None:
+        self.val: int = val
+        self.msg: str = msg
+        self.frac: float = frac
+        self.flag: bool = flag
+        self.opt: Optional[int] = opt
+
+
+@type_checked_call
+class FooDecorated:  # pylint: disable=too-few-public-methods
     """Some dummy class."""
 
     def __init__(self,  # pylint: disable=too-many-arguments,line-too-long
@@ -34,8 +95,46 @@ class FooNamedTuple(NamedTuple):  # pylint: disable=too-few-public-methods
     opt: Optional[int]
 
 
+@type_checked_call  # pylint: disable=too-few-public-methods
+class FooNamedTupleDecorated(NamedTuple):
+    """Some dummy class as a NamedTuple."""
+    val: int
+    msg: str
+    frac: float
+    flag: bool
+    opt: Optional[int]
+
+
 def foo_function(val: int, msg: str, frac: float, flag: bool,
                  opt: Optional[int]) -> Foo:
+    """Some dummy function. Forwarding to class for value storage."""
+    return Foo(val, msg, flag, opt, frac)
+
+
+@type_checked_call
+def foo_function_type_checked_call(val: int, msg: str, frac: float, flag: bool,  # pylint: disable=invalid-name
+                                   opt: Optional[int]) -> Foo:
+    """Some dummy function. Forwarding to class for value storage."""
+    return Foo(val, msg, flag, opt, frac)
+
+
+@type_checked_call_convert
+def foo_function_type_checked_call_convert(val: int, msg: str, frac: float,  # pylint: disable=invalid-name
+                                           flag: bool, opt: Optional[int]) -> Foo:
+    """Some dummy function. Forwarding to class for value storage."""
+    return Foo(val, msg, flag, opt, frac)
+
+
+@type_checked_call_skip
+def foo_function_type_checked_call_skip(val: int, msg: str, frac: float,  # pylint: disable=invalid-name
+                                        flag: bool, opt: Optional[int]) -> Foo:
+    """Some dummy function. Forwarding to class for value storage."""
+    return Foo(val, msg, flag, opt, frac)
+
+
+@type_checked_call_skip_convert
+def foo_function_type_checked_call_skip_convert(val: int, msg: str, frac: float,  # pylint: disable=invalid-name
+                                                flag: bool, opt: Optional[int]) -> Foo:
     """Some dummy function. Forwarding to class for value storage."""
     return Foo(val, msg, flag, opt, frac)
 
@@ -53,145 +152,285 @@ class TestUnpackingFoo(unittest.TestCase):  # pylint: disable=too-many-public-me
         self.assertEqual(the_foo.flag, True)
         self.assertEqual(the_foo.opt, opt_val)
 
-    def do_test_dict(self, target_func: Callable[..., TypeT]) -> None:
+    def do_test_dict(self, target_func: Callable[..., TypeT],
+                     decorated: bool) -> None:
         """Valid data dict."""
         data = {
             "val": 42, "msg": "hello", "frac": 3.14, "flag": True, "opt": 10}
-        a_foo = unpack_dict(target_func, data)
+        if not decorated:
+            a_foo = type_checked_apply(target_func, **data)
+        else:
+            a_foo = target_func(**data)
         self.check_result(a_foo, 10)
 
-    def do_test_ok(self, target_func: Callable[..., TypeT]) -> None:
+    def do_test_ok(self, target_func: Callable[..., TypeT],
+                   decorated: bool) -> None:
         """Valid JSON string."""
         object_repr = '{"val": 42, "msg": "hello", "frac": 3.14, ' \
                       '"flag": true, "opt": 10}'
-        a_foo = unpack_json(target_func, object_repr)
+        if not decorated:
+            a_foo = type_checked_apply(target_func, **json.loads(object_repr))
+        else:
+            a_foo = target_func(**json.loads(object_repr))
         self.check_result(a_foo, 10)
 
-    def do_test_opt_null(self, target_func: Callable[..., TypeT]) -> None:
+    def do_test_opt_null(self, target_func: Callable[..., TypeT],
+                         decorated: bool) -> None:
         """Valid JSON string null for the optional member."""
         object_repr = '{"val": 42, "msg": "hello", "frac": 3.14, ' \
                       '"flag": true, "opt": null}'
-        a_foo = unpack_json(target_func, object_repr)
+        if not decorated:
+            a_foo = type_checked_apply(target_func, **json.loads(object_repr))
+        else:
+            a_foo = target_func(**json.loads(object_repr))
         self.check_result(a_foo, None)
 
-    def do_test_additional(self, target_func: Callable[..., TypeT]) -> None:
+    def do_test_additional(self, target_func: Callable[..., TypeT],
+                           decorated: bool) -> None:
         """Valid JSON string with an additional field."""
         object_repr = '{"val": 42, "msg": "hello", "frac": 3.14, ''' \
                       '"flag": true, "opt": 10, "ignore": 1}'
-        a_foo = unpack_json(target_func, object_repr)
+        if not decorated:
+            a_foo = type_checked_apply_skip(target_func, **json.loads(object_repr))
+        else:
+            a_foo = target_func(**json.loads(object_repr))
         self.check_result(a_foo, 10)
 
-    def do_test_convert_ok(self, target_func: Callable[..., TypeT]) -> None:
+    def do_test_convert_ok(self, target_func: Callable[..., TypeT],
+                           decorated: bool) -> None:
         """Valid JSON string."""
         object_repr = '{"val": "42", "msg": 5, "frac": 3, ' \
                       '"flag": true, "opt": 10.1}'
-        a_foo = unpack_json(target_func, object_repr, True)
+        if not decorated:
+            a_foo = type_checked_apply_convert(target_func, **json.loads(object_repr))
+        else:
+            a_foo = target_func(**json.loads(object_repr))
         self.check_result(a_foo, 10, 3.0, '5')
 
-    def do_test_wrong_opt_type(self, target_func: Callable[..., TypeT]) -> None:
+    def do_test_additional_and_convert(self, target_func: Callable[..., TypeT],
+                                       decorated: bool) -> None:
+        """Valid JSON string with an additional field and one to convert."""
+        object_repr = '{"val": "42", "msg": "hello", "frac": 3.14, ''' \
+                      '"flag": true, "opt": 10, "ignore": 1}'
+        if not decorated:
+            a_foo = type_checked_apply_skip_convert(target_func, **json.loads(object_repr))
+        else:
+            a_foo = target_func(**json.loads(object_repr))
+        self.check_result(a_foo, 10)
+
+    @staticmethod
+    def do_test_wrong_opt_type(target_func: Callable[..., TypeT],
+                               decorated: bool) -> None:
         """Valid JSON string."""
         object_repr = '{"val": 42, "msg": "hello", "frac": 3.14, ' \
-                      '"flag": true, "opt": 10.1}'
-        with self.assertRaises(TypeError):
-            unpack_json(target_func, object_repr)
+                      '"flag": true, "opt": "wrong"}'
+        if not decorated:
+            type_checked_apply(target_func, **json.loads(object_repr))
+        else:
+            target_func(**json.loads(object_repr))
 
-    def do_test_convert_error(self, target_func: Callable[..., TypeT]) -> None:
+    @staticmethod
+    def do_test_convert_error(target_func: Callable[..., TypeT],
+                              decorated: bool) -> None:
         """Valid JSON string."""
         object_repr = '{"val": "twentyfour", "msg": "hello", "frac": 3.14, ' \
                       '"flag": true, "opt": 10}'
-        with self.assertRaises(ValueError):
-            unpack_json(target_func, object_repr, True)
+        if not decorated:
+            type_checked_apply_convert(target_func, **json.loads(object_repr))
+        else:
+            target_func(**json.loads(object_repr))
 
-    def do_test_missing(self, target_func: Callable[..., TypeT]) -> None:
+    @staticmethod
+    def do_test_missing(target_func: Callable[..., TypeT],
+                        decorated: bool) -> None:
         """Invalid JSON string: missing a field."""
         object_repr = '{"val": 42, "msg": "hello", "opt": 10, "flag": true}'
-        with self.assertRaises(ValueError):
-            unpack_json(target_func, object_repr)
+        if not decorated:
+            type_checked_apply(target_func, **json.loads(object_repr))
+        else:
+            target_func(**json.loads(object_repr))
 
-    def do_test_opt_missing(self, target_func: Callable[..., TypeT]) -> None:
+    def do_test_opt_missing(self, target_func: Callable[..., TypeT],
+                            decorated: bool) -> None:
         """Valid JSON string without providing value for optional member."""
         object_repr = '{"val": 42, "msg": "hello", "frac": 3.14, "flag": true}'
-        a_foo = unpack_json(target_func, object_repr)
+        if not decorated:
+            a_foo = type_checked_apply(target_func, **json.loads(object_repr))
+        else:
+            a_foo = target_func(**json.loads(object_repr))
         self.check_result(a_foo, None)
 
-    def do_test_incorrect_type(self, target_func: Callable[..., TypeT]) -> None:
+    @staticmethod
+    def do_test_incorrect_type(target_func: Callable[..., TypeT],
+                               decorated: bool) -> None:
         """Invalid JSON string: incorrect type of a field."""
         object_repr = '{"val": 42, "msg": "hello", "opt": 10, ' \
                       '"frac": "incorrect", "flag": true}'
-        with self.assertRaises(TypeError):
-            unpack_json(target_func, object_repr)
+        if not decorated:
+            type_checked_apply(target_func, **json.loads(object_repr))
+        else:
+            target_func(**json.loads(object_repr))
 
-    def do_test_invalid_json(self, target_func: Callable[..., TypeT]) -> None:
-        """Invalid JSON string: broken format."""
-        object_repr = 'I am not a JSON string'
-        with self.assertRaises(json.decoder.JSONDecodeError):
-            unpack_json(target_func, object_repr)
+    def do_test_function_with_targets(self, func: Callable[..., TypeT],
+                                      targets: List[Tuple[Any,
+                                                          bool,
+                                                          Any]]) -> None:
+        """Run test function with provided target functions
+        and expected exceptions."""
+        for target, decorated, ex in targets:
+            if ex:
+                with self.assertRaises(ex):
+                    func(target, decorated)
+            else:
+                func(target, decorated)
 
     def test_dict(self) -> None:
         """Valid data dict."""
-        self.do_test_dict(Foo)
-        self.do_test_dict(FooNamedTuple)
-        self.do_test_dict(foo_function)
+        self.do_test_function_with_targets(self.do_test_dict, [
+            (Foo, False, None),
+            (FooDecorated, True, None),
+            (FooNamedTuple, False, None),
+            (FooNamedTupleDecorated, True, None),
+            (foo_function, False, None),
+            (foo_function_type_checked_call, True, None),
+            (foo_function_type_checked_call_skip, True, None),
+            (foo_function_type_checked_call_convert, True, None),
+            (foo_function_type_checked_call_skip_convert, True, None),
+        ])
 
     def test_ok(self) -> None:
         """Valid JSON string."""
-        self.do_test_ok(Foo)
-        self.do_test_ok(FooNamedTuple)
-        self.do_test_ok(foo_function)
+        self.do_test_function_with_targets(self.do_test_ok, [
+            (Foo, False, None),
+            (FooDecorated, True, None),
+            (FooNamedTuple, False, None),
+            (FooNamedTupleDecorated, True, None),
+            (foo_function, False, None),
+            (foo_function_type_checked_call, True, None),
+            (foo_function_type_checked_call_skip, True, None),
+            (foo_function_type_checked_call_convert, True, None),
+            (foo_function_type_checked_call_skip_convert, True, None),
+        ])
 
     def test_opt_null(self) -> None:
         """Valid JSON string null for the optional member."""
-        self.do_test_opt_null(Foo)
-        self.do_test_opt_null(FooNamedTuple)
-        self.do_test_opt_null(foo_function)
+        self.do_test_function_with_targets(self.do_test_opt_null, [
+            (Foo, False, None),
+            (FooDecorated, True, None),
+            (FooNamedTuple, False, None),
+            (FooNamedTupleDecorated, True, None),
+            (foo_function, False, None),
+            (foo_function_type_checked_call, True, None),
+            (foo_function_type_checked_call_skip, True, None),
+            (foo_function_type_checked_call_convert, True, None),
+            (foo_function_type_checked_call_skip_convert, True, None),
+        ])
 
     def test_additional(self) -> None:
         """Valid JSON string with an additional field."""
-        self.do_test_additional(Foo)
-        self.do_test_additional(FooNamedTuple)
-        self.do_test_additional(foo_function)
+        self.do_test_function_with_targets(self.do_test_additional, [
+            (Foo, False, None),
+            (FooNamedTuple, False, None),
+            (foo_function, False, None),
+            (foo_function_type_checked_call, True, ValueError),
+            (foo_function_type_checked_call_skip, True, None),
+            (foo_function_type_checked_call_convert, True, ValueError),
+            (foo_function_type_checked_call_skip_convert, True, None),
+        ])
 
     def test_convert_ok(self) -> None:
         """Valid JSON string with an additional field."""
-        self.do_test_convert_ok(Foo)
-        self.do_test_convert_ok(FooNamedTuple)
-        self.do_test_convert_ok(foo_function)
+        self.do_test_function_with_targets(self.do_test_convert_ok, [
+            (Foo, False, None),
+            (FooNamedTuple, False, None),
+            (foo_function, False, None),
+            (foo_function_type_checked_call, True, TypeError),
+            (foo_function_type_checked_call_skip, True, TypeError),
+            (foo_function_type_checked_call_convert, True, None),
+            (foo_function_type_checked_call_skip_convert, True, None),
+        ])
+
+    def test_additional_and_convert(self) -> None:
+        """Valid JSON string with an additional field and one to convert."""
+        self.do_test_function_with_targets(self.do_test_additional_and_convert, [
+            (Foo, False, None),
+            (FooNamedTuple, False, None),
+            (foo_function, False, None),
+            (foo_function_type_checked_call, True, ValueError),
+            (foo_function_type_checked_call_skip, True, TypeError),
+            (foo_function_type_checked_call_convert, True, ValueError),
+            (foo_function_type_checked_call_skip_convert, True, None),
+        ])
 
     def test_wrong_opt_type(self) -> None:
         """Valid JSON string with an additional field."""
-        self.do_test_wrong_opt_type(Foo)
-        self.do_test_wrong_opt_type(FooNamedTuple)
-        self.do_test_wrong_opt_type(foo_function)
+        self.do_test_function_with_targets(self.do_test_wrong_opt_type, [
+            (Foo, False, TypeError),
+            (FooDecorated, True, TypeError),
+            (FooNamedTuple, False, TypeError),
+            (FooNamedTupleDecorated, True, TypeError),
+            (foo_function, False, TypeError),
+            (foo_function_type_checked_call, True, TypeError),
+            (foo_function_type_checked_call_skip, True, TypeError),
+            (foo_function_type_checked_call_convert, True, TypeError),
+            (foo_function_type_checked_call_skip_convert, True, TypeError),
+        ])
 
     def test_convert_error(self) -> None:
         """Valid JSON string with an additional field."""
-        self.do_test_convert_error(Foo)
-        self.do_test_convert_error(FooNamedTuple)
-        self.do_test_convert_error(foo_function)
+        self.do_test_function_with_targets(self.do_test_convert_error, [
+            (Foo, False, TypeError),
+            (FooDecorated, True, TypeError),
+            (FooNamedTuple, False, TypeError),
+            (FooNamedTupleDecorated, True, TypeError),
+            (foo_function, False, TypeError),
+            (foo_function_type_checked_call, True, TypeError),
+            (foo_function_type_checked_call_skip, True, TypeError),
+            (foo_function_type_checked_call_convert, True, TypeError),
+            (foo_function_type_checked_call_skip_convert, True, TypeError),
+        ])
 
     def test_missing(self) -> None:
         """Invalid JSON string: missing a field."""
-        self.do_test_missing(Foo)
-        self.do_test_missing(FooNamedTuple)
-        self.do_test_missing(foo_function)
+        self.do_test_function_with_targets(self.do_test_missing, [
+            (Foo, False, ValueError),
+            (FooDecorated, True, ValueError),
+            (FooNamedTuple, False, ValueError),
+            (FooNamedTupleDecorated, True, ValueError),
+            (foo_function, False, ValueError),
+            (foo_function_type_checked_call, True, ValueError),
+            (foo_function_type_checked_call_skip, True, ValueError),
+            (foo_function_type_checked_call_convert, True, ValueError),
+            (foo_function_type_checked_call_skip_convert, True, ValueError),
+        ])
 
     def test_opt_missing(self) -> None:
         """Valid JSON string without providing value for optional member."""
-        self.do_test_opt_missing(Foo)
-        self.do_test_opt_missing(FooNamedTuple)
-        self.do_test_opt_missing(foo_function)
+        self.do_test_function_with_targets(self.do_test_opt_missing, [
+            (Foo, False, None),
+            (FooDecorated, True, None),
+            (FooNamedTuple, False, None),
+            (FooNamedTupleDecorated, True, None),
+            (foo_function, False, None),
+            (foo_function_type_checked_call, True, None),
+            (foo_function_type_checked_call_skip, True, None),
+            (foo_function_type_checked_call_convert, True, None),
+            (foo_function_type_checked_call_skip_convert, True, None),
+        ])
 
     def test_incorrect_type(self) -> None:
         """Invalid JSON string: incorrect type of a field."""
-        self.do_test_incorrect_type(Foo)
-        self.do_test_incorrect_type(FooNamedTuple)
-        self.do_test_incorrect_type(foo_function)
-
-    def test_invalid_json(self) -> None:
-        """Invalid JSON string: broken format."""
-        self.do_test_invalid_json(Foo)
-        self.do_test_invalid_json(FooNamedTuple)
-        self.do_test_invalid_json(foo_function)
+        self.do_test_function_with_targets(self.do_test_incorrect_type, [
+            (Foo, False, TypeError),
+            (FooDecorated, True, TypeError),
+            (FooNamedTuple, False, TypeError),
+            (FooNamedTupleDecorated, True, TypeError),
+            (foo_function, False, TypeError),
+            (foo_function_type_checked_call, True, TypeError),
+            (foo_function_type_checked_call_skip, True, TypeError),
+            (foo_function_type_checked_call_convert, True, TypeError),
+            (foo_function_type_checked_call_skip_convert, True, TypeError),
+        ])
 
 
 class Point:  # pylint: disable=too-few-public-methods
@@ -209,10 +448,18 @@ class Nested:  # pylint: disable=too-few-public-methods
         self.pos: Point = pos
 
 
+@type_checked_call
+class NestedDecorated:  # pylint: disable=too-few-public-methods
+    """Dummy class with a non-primitive member."""
+
+    def __init__(self, pos: Point) -> None:
+        self.pos: Point = pos
+
+
 class TestUnpackingNested(unittest.TestCase):
     """Tests with valid and invalid JSON strings."""
 
-    def check_result(self, nested: Nested) -> None:
+    def check_result(self, nested: Union[Nested, NestedDecorated]) -> None:
         """Validate content of Nested's members."""
         self.assertEqual(nested.pos.x_val, 1)
         self.assertEqual(nested.pos.y_val, 2)
@@ -220,14 +467,70 @@ class TestUnpackingNested(unittest.TestCase):
     def test_ok(self) -> None:
         """Valid JSON string."""
         object_repr = '{"pos": {"x_val": 1, "y_val": 2}}'
-        nested: Nested = unpack_json(Nested, object_repr)
+        nested: Nested = type_checked_apply(Nested, **json.loads(object_repr))
         self.check_result(nested)
 
-    def test_from_dict(self) -> None:
+    def test_ok_decorated(self) -> None:
+        """Valid JSON string."""
+        object_repr = '{"pos": {"x_val": 1, "y_val": 2}}'
+        nested: NestedDecorated = NestedDecorated(**json.loads(object_repr))
+        self.check_result(nested)
+
+    def test_from_dict_decorated(self) -> None:
         """Valid JSON string."""
         data = {"pos": Point(1, 2)}
-        nested: Nested = unpack_dict(Nested, data)
+        nested: NestedDecorated = NestedDecorated(**data)
         self.check_result(nested)
+
+
+@type_checked_call  # pylint: disable=too-few-public-methods
+class Heart(NamedTuple):
+    """Nested class"""
+    weight_in_kg: float
+    pulse_at_rest: int
+
+
+@type_checked_call  # pylint: disable=too-few-public-methods
+class Human(NamedTuple):
+    """Class having a nested member"""
+    id: int
+    name: str
+    nick: Optional[str]
+    heart: Heart
+    friend_ids: List[int]
+
+
+class TestUnpackingHuman(unittest.TestCase):
+    """Tests with valid and invalid JSON strings."""
+
+    def check_result(self, human: Human) -> None:
+        """Validate content of Nested's members."""
+        self.assertEqual(human.name, "Tobias")
+        self.assertEqual(human.heart.pulse_at_rest, 52)
+
+    @staticmethod
+    def get_object_repr() -> str:
+        """JSON string to decode"""
+        return '''
+            {
+                "id": 1,
+                "name": "Tobias",
+                "heart": {
+                    "weight_in_kg": 0.31,
+                    "pulse_at_rest": 52
+                },
+                "friend_ids": [2, 3, 4, 5]
+            }'''
+
+    def test_ok(self) -> None:
+        """Valid JSON string."""
+        human: Human = Human(**json.loads(self.get_object_repr()))
+        self.check_result(human)
+
+    def test_ok_type_checked_apply_on_decorated(self) -> None:  # pylint: disable=invalid-name
+        """Valid JSON string."""
+        human: Human = type_checked_apply(Human, **json.loads(self.get_object_repr()))
+        self.check_result(human)
 
 
 class WithAny:  # pylint: disable=too-few-public-methods
@@ -243,13 +546,13 @@ class TestUnpackingWithAny(unittest.TestCase):
     def test_ok_str(self) -> None:
         """Valid JSON string."""
         object_repr = '{"val": "foo"}'
-        with_any: WithAny = unpack_json(WithAny, object_repr)
+        with_any: WithAny = type_checked_apply(WithAny, **json.loads(object_repr))
         self.assertEqual(with_any.val, "foo")
 
     def test_ok_float(self) -> None:
         """Valid JSON string."""
         object_repr = '{"val": 3.14}'
-        with_any: WithAny = unpack_json(WithAny, object_repr)
+        with_any: WithAny = type_checked_apply(WithAny, **json.loads(object_repr))
         self.assertEqual(with_any.val, 3.14)
 
 
@@ -277,7 +580,7 @@ class TestUnpackingWithList(unittest.TestCase):
                       '"opt_strs": ["a", "b"], ' \
                       '"opt_str_list": ["a", "b"], ' \
                       '"points": [{"x_val": 1, "y_val": 2}]}'
-        with_list: WithLists = unpack_json(WithLists, object_repr)
+        with_list: WithLists = type_checked_apply(WithLists, **json.loads(object_repr))
         self.assertEqual(with_list.ints, [1, 2])
         self.assertEqual(with_list.opt_strs, ["a", "b"])
         self.assertEqual(with_list.opt_str_list, ["a", "b"])
@@ -290,7 +593,7 @@ class TestUnpackingWithList(unittest.TestCase):
                       '"opt_strs": [null], ' \
                       '"opt_str_list": null, ' \
                       '"points": [{"x_val": 1, "y_val": 2}]}'
-        with_list: WithLists = unpack_json(WithLists, object_repr)
+        with_list: WithLists = type_checked_apply(WithLists, **json.loads(object_repr))
         self.assertEqual(with_list.ints, [1, 2])
         self.assertEqual(with_list.opt_strs, [None])
         self.assertEqual(with_list.opt_str_list, None)
@@ -303,7 +606,7 @@ class TestUnpackingWithList(unittest.TestCase):
                       '"opt_strs": [], ' \
                       '"opt_str_list": [], ' \
                       '"points": []}'
-        with_list: WithLists = unpack_json(WithLists, object_repr)
+        with_list: WithLists = type_checked_apply(WithLists, **json.loads(object_repr))
         self.assertEqual(with_list.ints, [])
         self.assertEqual(with_list.opt_strs, [])
         self.assertEqual(with_list.opt_str_list, [])
@@ -317,7 +620,7 @@ class TestUnpackingWithList(unittest.TestCase):
                       '"opt_str_list": ["a", "b"], ' \
                       '"points": [{"x_val": 1, "y_val": 2}]}'
         with self.assertRaises(TypeError):
-            unpack_json(WithLists, object_repr)
+            type_checked_apply(WithLists, **json.loads(object_repr))
 
 
 class WithUnion:  # pylint: disable=too-few-public-methods
@@ -334,7 +637,7 @@ class TestUnpackingWithUnion(unittest.TestCase):
         """Valid JSON string, but invalid target class."""
         object_repr = '{"val": "hi"}'
         with self.assertRaises(TypeError):
-            unpack_json(WithUnion, object_repr)
+            type_checked_apply(WithUnion, **json.loads(object_repr))
 
 
 class WithoutTypeAnnotation:  # pylint: disable=too-few-public-methods
@@ -351,7 +654,7 @@ class TestUnpackingWithoutTypeAnnotation(unittest.TestCase):
         """Valid JSON string, but invalid target class."""
         object_repr = '{"val": "hi"}'
         with self.assertRaises(TypeError):
-            unpack_json(WithoutTypeAnnotation, object_repr)
+            type_checked_apply(WithoutTypeAnnotation, **json.loads(object_repr))
 
 
 class WithDict:  # pylint: disable=too-few-public-methods
@@ -368,7 +671,7 @@ class TestUnpackingWithDict(unittest.TestCase):
         """Valid JSON string, but invalid target class."""
         object_repr = '{"val": {"key1": 1, "key2": 2}}'
         with self.assertRaises(TypeError):
-            unpack_json(WithDict, object_repr)
+            type_checked_apply(WithDict, **json.loads(object_repr))
 
 
 class WithArgs:  # pylint: disable=too-few-public-methods
@@ -385,7 +688,7 @@ class TestUnpackingWithArgs(unittest.TestCase):
         """Invalid target class."""
         object_repr = '{}'
         with self.assertRaises(TypeError):
-            unpack_json(WithArgs, object_repr)
+            type_checked_apply(WithArgs, **json.loads(object_repr))
 
 
 class WithKWArgs:  # pylint: disable=too-few-public-methods
@@ -402,7 +705,7 @@ class TestUnpackingWithKWArgs(unittest.TestCase):
         """Invalid target class."""
         object_repr = '{}'
         with self.assertRaises(TypeError):
-            unpack_json(WithKWArgs, object_repr)
+            type_checked_apply(WithKWArgs, **json.loads(object_repr))
 
 
 class TestUnpackingToNonCallable(unittest.TestCase):
@@ -412,4 +715,4 @@ class TestUnpackingToNonCallable(unittest.TestCase):
         """Invalid target."""
         object_repr = '{}'
         with self.assertRaises(TypeError):
-            unpack_json("hi", object_repr)  # type: ignore
+            type_checked_apply("hi", **json.loads(object_repr))  # type: ignore

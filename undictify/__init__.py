@@ -1,4 +1,7 @@
-from ._unpack import unpack_dict, unpack_json
+from ._unpack import type_checked_call, type_checked_call_convert
+from ._unpack import type_checked_call_skip, type_checked_call_skip_convert
+from ._unpack import type_checked_apply, type_checked_apply_convert
+from ._unpack import type_checked_apply_skip, type_checked_apply_skip_convert
 
 name = "undictify"
 

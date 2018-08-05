@@ -9,46 +9,103 @@
 
 undictify
 =========
-**Type-safe dictionary unpacking / JSON deserialization**
+**Type-checked function calls at runtime**
 
 
-Table of contents
------------------
-  * [Motivation](#motivation)
-  * [Details](#details)
-  * [Requirements and Installation](#requirements-and-installation)
+Introduction
+------------
+Let's start with a toy example:
+```python
+def times_two(value):
+    return 2 * value
+
+value = 3
+result = times_two(value)
+print(f'{value} * 2 == {result}')
+```
+
+This is fine, it outputs `output: 2 * 2 = 4`.
+But what if `value` accidentally is `'3'` instead of `3`?
+The output will become `output: 3 * 2 = 33`, which *might* not be desired.
+
+So you add something like
+```python
+assert isinstance(value, int)
+```
+to `times_two`. This will raise an `AssertionError` instead, which is better.
+But you still only recognize the mistake when actually running the code.
+Catching it earlier in the development process might be better.
+Luckily Python allows to opt-in for static typing by offering [type annotations](https://docs.python.org/3/library/typing.html).
+So you add them and [`mypy`](http://mypy-lang.org/) (or your IDE) will tell you about the problem early.
+```python
+def times_two(value: int) -> int:
+    return 2 * value
+
+value = '3'
+result = times_two(value) # error: Argument 1 to "times_two"
+                          # has incompatible type "str"; expected "int"
+print(f'{value} * 2 == {result}')
+```
+
+But you may get into a situation in which there is no useful static type information,
+because of values:
+- coming from external non-typed functions (so actually they are of type `Any`)
+- were produced by a (rogue) function that returns different types depending on some internal decision (`Union[T, V]`)
+- being provided as a `Dict[str, Any]`
+- etc.
+
+```python
+def times_two(value: int) -> int:
+    return 2 * value
+        
+def get_value() -> Any:
+    return '3'
+
+value = get_value()
+result = times_two(value)
+print(f'{value} * 2 == {result}')
+```
+
+At least with the [appropriate settings(https://stackoverflow.com/questions/51696060/how-to-make-mypy-complain-about-assigning-an-any-to-an-int-part-2/51696314#51696314), `mypy` should dutifully complain], and now you're left with two options:
+- Drop type-checking (for example by adding ` # type: ignore` to the end of the `result = times_two(value)` line): This however catapults you back into the insane world where `2 * 3 == 33`.
+- You manually add type checks before the call (or inside of `times_two`) like `assert isinstance(value, int)`: This of course does not provide static type checking (because of the dynamic nature of `value`), but at least guarantees sane runtime behavior. 
+
+But the process of writing that boilerplate validation code can become quite cumbersome if you have multiple parameters/functions to check.
+Also it is not very [DRY](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself) since you already have the needed type information in our function signature and you just duplicated it in the assertion statement.
+
+This is where undictify comes into play. Simply decorate your `times_two` function with `@type_checked_call`:
+```python
+from undictify import type_checked_call
+
+@type_checked_call
+def times_two(value: int) -> int:
+    return 2 * value
+```
+
+And the arguments of `times_two` will be type-checked with every call at runtime automatically. A `TypeError` will be raised if needed. 
+
+This concept of **dynamic type checks derived from static type annotations** is quite simple,
+however it is very powerful and brings some highly convenient consequences with it.
 
 
-Motivation
-----------
+Use case: JSON deserialization
+------------------------------
 
 Imagine your application receives a JSON string representing an entity you need to handle:
 
 ```python
-import json
-
-tobias = json.loads('''
+tobias_json = '''
     {
         "id": 1,
         "name": "Tobias",
-        "nick": "Tobi",
         "heart": {
             "weight_in_kg": 0.31,
             "pulse_at_rest": 52
         },
-        "friends": [2, 3, 4, 5]
-    }''')
+        "friend_ids": [2, 3, 4, 5]
+    }'''
 
-katrin = json.loads('''
-    {
-        "id": 2,
-        "name": "Katrin",
-        "heart": {
-            "weight_in_kg": 0.28,
-            "pulse_at_rest": 57
-        },
-        "friends": [1, 3, 6, 7, 8]
-    }''')
+tobias = json.loads(tobias_json)
 ```
 
 Now you start to work with it. Somewhere deep in your business logic you have:
@@ -61,7 +118,7 @@ If it had `"name": 4,` in it, you would get:
     name_length = len(tobias['name'])
 TypeError: object of type 'int' has no len()
 ```
-which is not nice. So you start to manually add type checking:
+at runtime, which is not nice. So you start to manually add type checking:
 ```python
 if isinstance(tobias['name'], str):
     name_length = len(tobias['name'])
@@ -70,14 +127,14 @@ else:
 ```
 
 You quickly realize that you need to separate concerns better,
-in that case business logic and input data validation.
+in that case the business logic and the input data validation.
 
 So you start to do all checks directly after receiving the data:
 ```python
 tobias = json.loads(...
-if isinstance(tobias['name'], str):
+if isinstance(tobias['id'], int):
     ...
-if isinstance(tobias['age'], int):
+if isinstance(tobias['name'], str):
     ...
 if isinstance(... # *yawn*
 ```
@@ -93,82 +150,89 @@ class Human(NamedTuple):
     name: str
     nick: Optional[str]
     heart: Heart
-    friends: List[int]
+    friend_ids: List[int]
 ```
 
-Having the safety provided by the static type annotations (and probably checking your code with `mypy`) is a great thing for avoiding errors in the rest of your application and for helping your IDE to help you.
-But all this boilerplate for validation code is cumbersome to write. 
+Having the safety provided by the static type annotations (and probably checking your code with `mypy`) is a great because of all the:
+- bugs that don't make it into PROD
+- manual type checks (and matching unit tests) that you don't have to write
+- help your IDE can now offer
+- easier and more confident refactorings
+
+But again, writing all that boilerplate code for data validation is tedious (and not DRY).
 
 So you decide to use a library that does JSON schema validation for you.
-But now you have to manually adjust the schema every time your entity structure changes, which is not really DRY.
+But now you have to manually adjust the schema every time your entity structure changes, which still is not DRY, and thus also brings with it all the typical possibilities to make mistakes.
 
-This is where undictify comes into play:
+Undictify can help here too!
+Initialization of a `NamedTuple` is just a call to its constructor.
+So you simply need to annotate the classes with `type_cheked_call` and you are done:
 ```python
-from undictify import unpack_dict
-tobias: Human = unpack_dict(Human, json.loads(...))
+@type_checked_call
+class Heart(NamedTuple):
+    ...
+@type_checked_call
+class Human(NamedTuple):
+    ...
 ```
 
-It uses the type information of your target class to safely unpack the dictionary into an object.
-It throws exceptions with meaningful details in their associated values in case of an error like:
+Undictify will type-check the construction of objects of type `Heart` and `Human` automatically.
+(This works for normal classes with a manually written `__init__` function too.
+You just need to provide the type annotations to its parameters.) So you can use the usual dictionary unpacking syntax, to safely convert your untyped dictionary resulting from the JSON string into your statically typed class:
+
+```python
+tobias = Human(**json.loads(tobias_json))
+```
+
+It throws exceptions with meaningful details in their associated values in case of errors like:
 - missing a field
 - a field having the wrong type
+- etc.
 
 It also supports:
-- optional values being omitted instead of being `None` explicitly
-- skipping superfluous fields in the source dict, i.e., fields that are not present in the target
+- optional values being omitted instead of being `None` explicitly (as shown in the example with the `nick` field)
 
 
 Details
 -------
 
-Undictify achieves the feat mentioned in the [motivation](#motivation) by `inspect`ing the types of the constructor parameters of the target class, instead of checking the actual members.
+Sometimes, e.g., in case of unpacking a dictionary resulting from a JSON string,
+you might want to just skip the fields in the dictionary that your function / constructor does not take as a parameter.
+For these cases undictify provides `@type_checked_call_skip`.
 
-This allows classes to not only be plain data structures, but to do stuff with the valued given to them:
+It also supports valid type conversions via `@type_checked_call_convert`,
+which might for example come in handy when processing the arguments of an HTTP request you receive for example in a `get` handler of a `flask_restful.Resource` class:
 ```python
-class Person:
-    def __init__(self, age: str) -> None:
-        self.msg: str = f'Hi, I am {age} years old.'
-    def say_something(self) -> None:
-        print(self.msg)
-        
-somebody: Person = unpack_dict(Person, {'age': 28})
-somebody.say_something()
-```
-
-Thus it is not limited to `class`es and `NamedTuple`s,
-but it can do dictionary unpacking into arbitrary annotated functions.
-So it resembles something like a type-safe version of `**kwargs`.
-
-```python
-def process(some_int: int, some_str: str) -> None:
-    pass
-
-result = undictify.unpack_dict(process, {'some_int': 42, 'some_str': 'foo'})
-```
-
-It also supports valid type conversions, if you explicitly set its `convert_types` parameter to `True`.
-This allows you to also use it for processing the arguments of an HTTP request you receive for example in a `get` handler of a `flask_restful.Resource` class:
-```python
-from undictify import unpack_dict
-
+@type_checked_call_convert
 def target_function(some_int: int, some_str: str)
 
 class WebController(Resource):
     def get(self) -> Any:
-        result = unpack_dict(target_function, flask.request.args,
-                             convert_types=True)
         # request.args is something like {"some_int": "4", "some_str": "hi"}
+        result = target_function(**flask.request.args)
 ```
 
-The values in the `MultiDict` `request.args` are all strings, but `unpack_dict` tries to convert them with `convert_types == True`.
+The values in the `MultiDict` `request.args` are all strings, but the logic behind `@type_checked_call_convert` tries to convert them into the desired target types with reasonable exceptions in case the conversion is not possible.
 
-This way the a request to `http://.../foo?some_int=4&some_str=hi` would be handled normally,
+This way a request to `http://.../foo?some_int=4&some_str=hi` would be handled normally,
 but `http://.../foo?some_int=four&some_str=hi` would raise an appropriate `TypeError`.
+
+
+Additional flexibility is offered for cases in which you would like to not type-check all calls of a specific function / class constructor, but only some. You can use `type_checked_apply` instead of adding the annotation for those:
+
+```python
+from undictify import type_checked_apply
+
+def times_two(value: int) -> int:
+    return 2 * value
+
+value: Any = '3'
+resutl = type_checked_apply(times_two, value)
+```
 
 
 Requirements and Installation
 -----------------------------
-
 
 You need Python 3.6.5 or higher.
 

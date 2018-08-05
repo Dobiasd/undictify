@@ -1,9 +1,8 @@
 """
-undictify - Type-safe dictionary unpacking / JSON deserialization
+undictify - Type-checked function calls at runtime
 """
 
 import inspect
-import json
 from typing import Any, Callable, Dict, List
 from typing import Type, TypeVar
 from typing import _Union  # type: ignore
@@ -11,27 +10,129 @@ from typing import _Union  # type: ignore
 TypeT = TypeVar('TypeT')
 
 
-def unpack_dict(target_func: Callable[..., TypeT],
-                data: Dict[str, Any],
-                convert_types: bool = False) -> TypeT:
+def type_checked_call(func: Callable[..., TypeT]) -> Callable[..., TypeT]:
+    """Decorator that type checks arguments to every call of a function."""
+
+    def __undictify_wrapper_func(*args: Any, **kwargs: Any) -> TypeT:
+        return type_checked_apply(func, *args, **kwargs)
+
+    return __undictify_wrapper_func
+
+
+def type_checked_call_skip(func: Callable[..., TypeT]) -> Callable[..., TypeT]:
+    """Decorator that type checks arguments to every call of a function.
+    It skips all keyword arguments that the function does not take."""
+
+    def __undictify_wrapper_func(*args: Any, **kwargs: Any) -> TypeT:
+        return type_checked_apply_skip(func, *args, **kwargs)
+
+    return __undictify_wrapper_func
+
+
+def type_checked_call_convert(func: Callable[..., TypeT]) -> Callable[..., TypeT]:
+    """Decorator that type checks arguments to every call of a function.
+    It converts arguments into target types of parameters if possible."""
+
+    def __undictify_wrapper_func(*args: Any, **kwargs: Any) -> TypeT:
+        return type_checked_apply_convert(func, *args, **kwargs)
+
+    return __undictify_wrapper_func
+
+
+def type_checked_call_skip_convert(func: Callable[..., TypeT]) -> Callable[..., TypeT]:
+    """Decorator that type checks arguments to every call of a function.
+    It skips all keyword arguments that the function does not take and
+    converts arguments into target types of parameters if possible."""
+
+    def __undictify_wrapper_func(*args: Any, **kwargs: Any) -> TypeT:
+        return type_checked_apply_skip_convert(func, *args, **kwargs)
+
+    return __undictify_wrapper_func
+
+
+def type_checked_apply(func: Callable[..., TypeT],
+                       *args: Any, **kwargs: Any) -> TypeT:
+    """Type check the arguments of a function call."""
+    return __unpack_dict(func, __merge_args_and_kwargs(func, *args, **kwargs),
+                         False, False)
+
+
+def type_checked_apply_skip(func: Callable[..., TypeT],
+                            *args: Any, **kwargs: Any) -> TypeT:
+    """Type check the arguments of a function call.
+    Skips all keyword arguments that the function does not take."""
+    return __unpack_dict(func, __merge_args_and_kwargs(func, *args, **kwargs),
+                         True, False)
+
+
+def type_checked_apply_convert(func: Callable[..., TypeT],
+                               *args: Any, **kwargs: Any) -> TypeT:
+    """Type check the arguments of a function call.
+    Convert arguments into target types of parameters if possible."""
+    return __unpack_dict(func, __merge_args_and_kwargs(func, *args, **kwargs),
+                         False, True)
+
+
+def type_checked_apply_skip_convert(func: Callable[..., TypeT],
+                                    *args: Any, **kwargs: Any) -> TypeT:
+    """Decorator that type checks arguments to every call of a function.
+    Skips all keyword arguments that the function does not take and
+    convert arguments into target types of parameters if possible."""
+    return __unpack_dict(func, __merge_args_and_kwargs(func, *args, **kwargs),
+                         True, True)
+
+
+def __merge_args_and_kwargs(func: Callable[..., TypeT],
+                            *args: Any, **kwargs: Any) -> Dict[str, Any]:
+    """Returns one kwargs dictionary or
+    raises an exeption in case of overlapping-name problems."""
+    signature = inspect.signature(func)
+    param_names = [param.name for param in signature.parameters.values()]
+    if len(args) > len(param_names):
+        raise ValueError(f'Too many parameters for {func.__name__}.')
+    args_as_kwargs = dict(zip(param_names, list(args)))
+    keys_in_args_and_kwargs = set.intersection(set(args_as_kwargs.keys()),
+                                               set(kwargs.keys()))
+    if keys_in_args_and_kwargs:
+        raise ValueError(f'The following parameters are given as '
+                         f'arg and kwarg in call of {func.__name__}: '
+                         f'{keys_in_args_and_kwargs}')
+
+    return {**args_as_kwargs, **kwargs}
+
+
+def __unpack_dict(target_func: Callable[..., TypeT],
+                  data: Dict[str, Any],
+                  skip_superfluous: bool = False,
+                  convert_types: bool = False) -> TypeT:
     """Constructs an object in a type-safe way from a dictionary."""
 
     if not callable(target_func):
         raise TypeError(f'Target "{target_func}" is not callable.')
 
+    if target_func.__name__ == '__undictify_wrapper_func':
+        return target_func(**data)
+
     signature = inspect.signature(target_func)
     ctor_params: Dict[str, Any] = {}
+
+    if not skip_superfluous:
+        param_names = [param.name for param in signature.parameters.values()]
+        argument_names = data.keys()
+        superfluous = set(argument_names) - set(param_names)
+        if superfluous:
+            raise ValueError(f'Superfluous parameters in call: {superfluous}')
 
     for param in signature.parameters.values():
         if param.kind != inspect.Parameter.POSITIONAL_OR_KEYWORD:
             raise TypeError('Only parameters of kind POSITIONAL_OR_KEYWORD '
-                            'supported in target classes.')
+                            'supported in target functions.')
         if __is_union_type(param.annotation) \
                 and not __is_optional_type(param.annotation):
-            raise TypeError('Union members in target class other than Optional '
+            raise TypeError('Union members in target function other than Optional '
                             'are not supported.')
         if __is_dict_type(param.annotation):
-            raise TypeError('Dict members in target class are not supported.')
+            raise TypeError('Dict members in target function are not supported.')
         if param.name not in data:
             if __is_optional_type(param.annotation):
                 ctor_params[param.name] = None
@@ -46,20 +147,13 @@ def unpack_dict(target_func: Callable[..., TypeT],
     return target_func(**ctor_params)
 
 
-def unpack_json(target_func: Callable[..., TypeT],
-                object_repr: str, convert_types: bool = False) -> TypeT:
-    """Constructs an object in a type-safe way from a JSON strings."""
-    return unpack_dict(target_func, json.loads(object_repr),
-                       convert_types)
-
-
 def __get_value(target_type: Type[TypeT], value: Any,
                 log_name: str, convert_types: bool = False) -> Any:
     """Convert a single value into target type if possible."""
     if __is_list(value):
         if not __is_list_type(target_type) and \
                 not __is_optional_list_type(target_type):
-            raise ValueError(f'No list expected for {log_name}')
+            raise TypeError(f'No list expected for {log_name}')
         target_elems = []
         target_elem_type = __get_list_type_elem_type(target_type)
         for elem in value:
@@ -68,15 +162,14 @@ def __get_value(target_type: Type[TypeT], value: Any,
         return target_elems
 
     if __is_dict(value):
-        return unpack_dict(target_type, value, convert_types)
+        return __unpack_dict(target_type, value, convert_types)
 
-    if __is_optional_type(target_type):
-        allowed_types = __get_union_types(target_type)
-    else:
-        allowed_types = [target_type]
+    allowed_types = __get_union_types(target_type) \
+        if __is_optional_type(target_type) \
+        else [target_type]
 
     if target_type is inspect.Parameter.empty:
-        raise TypeError(f'Parameter {log_name} of target class '
+        raise TypeError(f'Parameter {log_name} of target function '
                         'is missing a type annotation.')
 
     if Any not in allowed_types:
@@ -84,8 +177,15 @@ def __get_value(target_type: Type[TypeT], value: Any,
             json_type = type(value)
             if convert_types:
                 if __is_optional_type(target_type):
-                    return __get_optional_type(target_type)(value)
-                return target_type(value)  # type: ignore
+                    target_type = __get_optional_type(target_type)
+                try:
+                    return target_type(value)  # type: ignore
+                except ValueError:
+                    raise TypeError(f'Can not convert {value} '
+                                    f'from type {__get_type_name(json_type)} '
+                                    f'into type {__get_type_name(target_type)} '
+                                    f'for key {log_name}.')
+
             raise TypeError(f'Key {log_name} has incorrect type: '
                             f'{__get_type_name(json_type)} instead of '
                             f'{__get_type_name(target_type)}.')

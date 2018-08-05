@@ -5,10 +5,10 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="undictify",
-    version="0.1.1",
+    version="0.2.0",
     author="Tobias Hermann",
     author_email="editgym@gmail.com",
-    description="Type-safe dictionary unpacking / JSON deserialization",
+    description="Type-checked function calls at runtime",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="http://github.com/Dobiasd/undictify",
