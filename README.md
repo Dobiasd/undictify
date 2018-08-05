@@ -12,6 +12,14 @@ undictify
 **Type-checked function calls at runtime**
 
 
+Table of contents
+-----------------
+  * [Introduction](#introduction)
+  * [Use case: JSON deserialization](#use-case-json-deserialization)
+  * [Details](#details)
+  * [Requirements and Installation](#requirements-and-installation)
+
+
 Introduction
 ------------
 Let's start with a toy example:
@@ -189,8 +197,7 @@ It throws exceptions with meaningful details in their associated values in case 
 - a field having the wrong type
 - etc.
 
-It also supports:
-- optional values being omitted instead of being `None` explicitly (as shown in the example with the `nick` field)
+It also supports optional values being omitted instead of being `None` explicitly (as shown in the example with the `nick` field).
 
 
 Details
@@ -216,7 +223,6 @@ The values in the `MultiDict` `request.args` are all strings, but the logic behi
 
 This way a request to `http://.../foo?some_int=4&some_str=hi` would be handled normally,
 but `http://.../foo?some_int=four&some_str=hi` would raise an appropriate `TypeError`.
-
 
 Additional flexibility is offered for cases in which you would like to not type-check all calls of a specific function / class constructor, but only some. You can use `type_checked_apply` instead of adding the annotation for those:
 
