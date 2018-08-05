@@ -3,9 +3,15 @@ undictify - Type-checked function calls at runtime
 """
 
 import inspect
-from typing import Any, Callable, Dict, List
-from typing import Type, TypeVar
-from typing import _Union  # type: ignore
+import sys
+from typing import Any, Callable, Dict, List, Type, TypeVar, Union
+
+VER_3_7_AND_UP = sys.version_info[:3] >= (3, 7, 0)  # PEP 560
+
+if VER_3_7_AND_UP:
+    from typing import _GenericAlias  # type: ignore
+else:
+    from typing import _Union  # type: ignore
 
 TypeT = TypeVar('TypeT')
 
@@ -195,6 +201,9 @@ def __get_value(target_type: Type[TypeT], value: Any,
 
 def __is_union_type(the_type: Type[TypeT]) -> bool:
     """Return True if the type is a Union."""
+    if VER_3_7_AND_UP:
+        return (the_type is Union or  # pylint: disable=unidiomatic-typecheck
+                isinstance(the_type, _GenericAlias) and the_type.__origin__ is Union)
     return type(the_type) is _Union  # pylint: disable=unidiomatic-typecheck
 
 
