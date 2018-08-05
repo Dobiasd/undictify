@@ -9,7 +9,7 @@
 
 undictify
 =========
-**Type-checked function calls at runtime**
+**A Python library allowing type-checked function calls at runtime**
 
 
 Table of contents
@@ -92,7 +92,7 @@ def times_two(value: int) -> int:
 
 And the arguments of `times_two` will be type-checked with every call at runtime automatically. A `TypeError` will be raised if needed. 
 
-This concept of **dynamic type checks derived from static type annotations** is quite simple,
+This concept of **runtime type-checks of function calls derived from static type annotations** is quite simple,
 however it is very powerful and brings some highly convenient consequences with it.
 
 
