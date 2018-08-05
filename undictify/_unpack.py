@@ -210,6 +210,9 @@ def __is_union_type(the_type: Type[TypeT]) -> bool:
 def __is_list_type(the_type: Type[TypeT]) -> bool:
     """Return True if the type is a List."""
     try:
+        if VER_3_7_AND_UP:
+            return (issubclass(the_type, List) or
+                    isinstance(the_type, _GenericAlias) and the_type.__origin__ is List)
         return issubclass(the_type, List)
     except TypeError:
         return False
