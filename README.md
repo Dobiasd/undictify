@@ -53,18 +53,18 @@ katrin = json.loads('''
 
 Now you start to work with it. Somewhere deep in your business logic you have:
 ```python
-name_length = len(tobi['name'])
+name_length = len(tobias['name'])
 ```
 But that's only fine if the original JSON string was well-behaved.
 If it had `"name": "Tobias",` in it, you would get:
 ```
-    name_length = len(tobi['name'])
+    name_length = len(tobias['name'])
 TypeError: tuple indices must be integers or slices, not str
 ```
 which is not nice. So you start to manually do type checking:
 ```python
-if isinstance(tobi['name'], str):
-    name_length = len(tobi['name'])
+if isinstance(tobias['name'], str):
+    name_length = len(tobias['name'])
 else:
     # todo: handle the situation somehow
 ```
@@ -75,9 +75,9 @@ in that case business logic and input data validation.
 So you start to do all checks directly after receiving the data:
 ```python
 tobi = json.loads(...
-if isinstance(tobi['name'], str):
+if isinstance(tobias['name'], str):
     ...
-if isinstance(tobi['age'], int):
+if isinstance(tobias['age'], int):
     ...
 if isinstance(... # *yawn*
 ```
