@@ -56,12 +56,12 @@ Now you start to work with it. Somewhere deep in your business logic you have:
 name_length = len(tobias['name'])
 ```
 But that's only fine if the original JSON string was well-behaved.
-If it had `"name": "Tobias",` in it, you would get:
+If it had `"name": 4,` in it, you would get:
 ```
     name_length = len(tobias['name'])
-TypeError: tuple indices must be integers or slices, not str
+TypeError: object of type 'int' has no len()
 ```
-which is not nice. So you start to manually do type checking:
+which is not nice. So you start to manually add type checking:
 ```python
 if isinstance(tobias['name'], str):
     name_length = len(tobias['name'])
