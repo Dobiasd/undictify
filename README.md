@@ -186,11 +186,13 @@ class Human(NamedTuple):
 
 Undictify will type-check the construction of objects of type `Heart` and `Human` automatically.
 (This works for normal classes with a manually written `__init__` function too.
-You just need to provide the type annotations to its parameters.) So you can use the usual dictionary unpacking syntax, to safely convert your untyped dictionary resulting from the JSON string into your statically typed class:
+You just need to provide the type annotations to its parameters.) So you can use the usual dictionary unpacking syntax, to safely convert your untyped dictionary (i.e., `Dict[str, Any]`) resulting from the JSON string into your statically typed class:
 
 ```python
 tobias = Human(**json.loads(tobias_json))
 ```
+
+(Btw this application is the origin of the name of this library.)
 
 It throws exceptions with meaningful details in their associated values in case of errors like:
 - missing a field
