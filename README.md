@@ -27,7 +27,7 @@ Imagine your application receives a JSON string representing an entity you need 
 ```python
 import json
 
-tobi = json.loads('''
+tobias = json.loads('''
     {
         "id": 1,
         "name": "Tobias",
@@ -74,7 +74,7 @@ in that case business logic and input data validation.
 
 So you start to do all checks directly after receiving the data:
 ```python
-tobi = json.loads(...
+tobias = json.loads(...
 if isinstance(tobias['name'], str):
     ...
 if isinstance(tobias['age'], int):
@@ -105,7 +105,7 @@ But now you have to manually adjust the schema every time your entity structure 
 This is where undictify comes into play:
 ```python
 from undictify import unpack_dict
-tobi: Human = unpack_dict(Human, json.loads(...))
+tobias: Human = unpack_dict(Human, json.loads(...))
 ```
 
 It uses the type information of your target class to safely unpack the dictionary into an object.
