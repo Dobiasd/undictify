@@ -11,7 +11,7 @@ install:
   - python3 -m pip install pylint
   - python3 -m pip install mypy
   - python3 -m pip install .
-  - pylint --disable=no-name-in-module ./undictify/_unpack.py
+  - pylint ./undictify/_unpack.py
   - mypy --strict ./undictify/_unpack.py
   - cd undictify && python3 -m unittest _unpack.py && cd ..
 script:

@@ -8,10 +8,12 @@ from typing import Any, Callable, Dict, List, Type, TypeVar, Union
 
 VER_3_7_AND_UP = sys.version_info[:3] >= (3, 7, 0)  # PEP 560
 
+# pylint: disable=no-name-in-module
 if VER_3_7_AND_UP:
     from typing import _GenericAlias  # type: ignore
 else:
     from typing import _Union  # type: ignore
+# pylint: enable=no-name-in-module
 
 TypeT = TypeVar('TypeT')
 
