@@ -107,19 +107,19 @@ def __merge_args_and_kwargs(func: Callable[..., TypeT],
     return {**args_as_kwargs, **kwargs}
 
 
-def __unpack_dict(target_func: Callable[..., TypeT],
+def __unpack_dict(func: Callable[..., TypeT],
                   data: Dict[str, Any],
                   skip_superfluous: bool = False,
                   convert_types: bool = False) -> TypeT:
     """Constructs an object in a type-safe way from a dictionary."""
 
-    if not callable(target_func):
-        raise TypeError(f'Target "{target_func}" is not callable.')
+    if not callable(func):
+        raise TypeError(f'Target "{func}" is not callable.')
 
-    if target_func.__name__ == '__undictify_wrapper_func':
-        return target_func(**data)
+    if hasattr(func, '__name__') and func.__name__ == '__undictify_wrapper_func':
+        return func(**data)
 
-    signature = inspect.signature(target_func)
+    signature = inspect.signature(func)
     ctor_params: Dict[str, Any] = {}
 
     if not skip_superfluous:
@@ -150,7 +150,7 @@ def __unpack_dict(target_func: Callable[..., TypeT],
                                                   param.name,
                                                   convert_types)
 
-    return target_func(**ctor_params)
+    return func(**ctor_params)
 
 
 def __get_value(target_type: Type[TypeT], value: Any,
@@ -211,8 +211,8 @@ def __is_list_type(the_type: Type[TypeT]) -> bool:
     """Return True if the type is a List."""
     try:
         if VER_3_7_AND_UP:
-            return (issubclass(the_type, List) or
-                    isinstance(the_type, _GenericAlias) and the_type.__origin__ is List)
+            return isinstance(the_type,
+                              _GenericAlias) and the_type.__origin__ is list
         return issubclass(the_type, List)
     except TypeError:
         return False
@@ -231,6 +231,9 @@ def __is_optional_list_type(the_type: Type[TypeT]) -> bool:
 def __is_dict_type(the_type: Type[TypeT]) -> bool:
     """Return True if the type is a Dict."""
     try:
+        if VER_3_7_AND_UP:
+            return isinstance(the_type,
+                              _GenericAlias) and the_type.__origin__ is dict
         return issubclass(the_type, Dict)
     except TypeError:
         return False
