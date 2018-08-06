@@ -444,8 +444,9 @@ class Point:  # pylint: disable=too-few-public-methods
 class Nested:  # pylint: disable=too-few-public-methods
     """Dummy class with a non-primitive member."""
 
-    def __init__(self, pos: Point) -> None:
+    def __init__(self, pos: Point, opt_pos2: Optional[Point]) -> None:
         self.pos: Point = pos
+        self.opt_pos2: Optional[Point] = opt_pos2
 
 
 @type_checked_call
@@ -466,6 +467,18 @@ class TestUnpackingNested(unittest.TestCase):
 
     def test_ok(self) -> None:
         """Valid JSON string."""
+        object_repr = '{"pos": {"x_val": 1, "y_val": 2}, "opt_pos2": {"x_val": 3, "y_val": 4}}'
+        nested: Nested = type_checked_apply(Nested, **json.loads(object_repr))
+        self.check_result(nested)
+
+    def test_ok_opt_null(self) -> None:
+        """Valid JSON string with optional explicitly being None."""
+        object_repr = '{"pos": {"x_val": 1, "y_val": 2}, "opt_pos2": null}'
+        nested: Nested = type_checked_apply(Nested, **json.loads(object_repr))
+        self.check_result(nested)
+
+    def test_ok_opt_missing(self) -> None:
+        """Valid JSON string without optional field."""
         object_repr = '{"pos": {"x_val": 1, "y_val": 2}}'
         nested: Nested = type_checked_apply(Nested, **json.loads(object_repr))
         self.check_result(nested)

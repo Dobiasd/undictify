@@ -170,6 +170,9 @@ def __get_value(target_type: Type[TypeT], value: Any,
         return target_elems
 
     if __is_dict(value):
+        if __is_optional_type(target_type):
+            return __unpack_dict(__get_optional_type(target_type),
+                                 value, convert_types)
         return __unpack_dict(target_type, value, convert_types)
 
     allowed_types = __get_union_types(target_type) \
