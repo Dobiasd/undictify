@@ -471,6 +471,18 @@ class TestUnpackingNested(unittest.TestCase):
         nested: Nested = type_checked_apply(Nested, **json.loads(object_repr))
         self.check_result(nested)
 
+    def test_ok_nested_already_objects(self) -> None:
+        """Valid JSON string."""
+        object_dict = {"pos": Point(1, 2), "opt_pos2": Point(3, 4)}
+        nested: Nested = type_checked_apply(Nested, **object_dict)
+        self.check_result(nested)
+
+    def test_ok_nested_already_objects_opt_none(self) -> None:
+        """Valid JSON string."""
+        object_dict = {"pos": Point(1, 2), "opt_pos2": None}
+        nested: Nested = type_checked_apply(Nested, **object_dict)
+        self.check_result(nested)
+
     def test_ok_opt_null(self) -> None:
         """Valid JSON string with optional explicitly being None."""
         object_repr = '{"pos": {"x_val": 1, "y_val": 2}, "opt_pos2": null}'
