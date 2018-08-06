@@ -620,8 +620,10 @@ class TestUnpackingHuman(unittest.TestCase):
 
     def test_ok_type_checked_apply_on_decorated(self) -> None:  # pylint: disable=invalid-name
         """Valid JSON string."""
-        human: Human = type_checked_apply(Human, **json.loads(self.get_object_repr()))
+        human: Human = Human(**json.loads(self.get_object_repr()))
+        human_2: Human = type_checked_apply(Human, **json.loads(self.get_object_repr()))
         self.check_result(human)
+        self.check_result(human_2)
 
 
 class WithAny:  # pylint: disable=too-few-public-methods
