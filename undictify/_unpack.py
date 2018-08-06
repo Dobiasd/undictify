@@ -24,6 +24,7 @@ def type_checked_call(func: Callable[..., TypeT]) -> Callable[..., TypeT]:
     def __undictify_wrapper_func(*args: Any, **kwargs: Any) -> TypeT:
         return type_checked_apply(func, *args, **kwargs)
 
+    __undictify_wrapper_func.__undictify_wrapped_func = func
     return __undictify_wrapper_func
 
 
@@ -34,6 +35,7 @@ def type_checked_call_skip(func: Callable[..., TypeT]) -> Callable[..., TypeT]:
     def __undictify_wrapper_func(*args: Any, **kwargs: Any) -> TypeT:
         return type_checked_apply_skip(func, *args, **kwargs)
 
+    __undictify_wrapper_func.__undictify_wrapped_func = func
     return __undictify_wrapper_func
 
 
@@ -44,6 +46,7 @@ def type_checked_call_convert(func: Callable[..., TypeT]) -> Callable[..., TypeT
     def __undictify_wrapper_func(*args: Any, **kwargs: Any) -> TypeT:
         return type_checked_apply_convert(func, *args, **kwargs)
 
+    __undictify_wrapper_func.__undictify_wrapped_func = func
     return __undictify_wrapper_func
 
 
@@ -55,6 +58,7 @@ def type_checked_call_skip_convert(func: Callable[..., TypeT]) -> Callable[..., 
     def __undictify_wrapper_func(*args: Any, **kwargs: Any) -> TypeT:
         return type_checked_apply_skip_convert(func, *args, **kwargs)
 
+    __undictify_wrapper_func.__undictify_wrapped_func = func
     return __undictify_wrapper_func
 
 
@@ -118,7 +122,9 @@ def __unpack_dict(func: Callable[..., TypeT],
     if not callable(func):
         raise TypeError(f'Target "{func}" is not callable.')
 
-    if hasattr(func, '__name__') and func.__name__ == '__undictify_wrapper_func':
+    assert __is_dict(data), 'Argument data needs to be a dictionary.'
+
+    if hasattr(func, '__undictify_wrapped_func'):
         return func(**data)
 
     signature = inspect.signature(func)
@@ -175,9 +181,16 @@ def __get_value(target_type: Type[TypeT], value: Any,
                                  value, convert_types)
         return __unpack_dict(target_type, value, convert_types)
 
-    allowed_types = __get_union_types(target_type) \
+    if hasattr(target_type, '__undictify_wrapped_func'):
+        if __is_dict(value):
+            return target_type(**value)
+        if type(value) == target_type.__undictify_wrapped_func:
+            return value
+        return target_type.__undictify_wrapped_func(value)
+
+    allowed_types = list(map(__unwrap_decorator_type, __get_union_types(target_type) \
         if __is_optional_type(target_type) \
-        else [target_type]
+        else [target_type]))
 
     if target_type is inspect.Parameter.empty:
         raise TypeError(f'Parameter {log_name} of target function '
@@ -312,3 +325,13 @@ def __is_dict(value: TypeT) -> bool:
 def __is_list(value: TypeT) -> bool:
     """Return True if the value is a list."""
     return isinstance(value, list)
+
+
+def __unwrap_decorator_type(the_type: TypeT) -> type(Any):
+    """Get the actual type returned by the internal wrapper"""
+    try:
+        if hasattr(the_type, '__undictify_wrapped_func'):
+            return the_type.__undictify_wrapped_func
+        return the_type
+    except TypeError:
+        return the_type

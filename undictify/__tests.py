@@ -448,13 +448,25 @@ class Nested:  # pylint: disable=too-few-public-methods
         self.pos: Point = pos
         self.opt_pos2: Optional[Point] = opt_pos2
 
+@type_checked_call
+class PointDecorated:  # pylint: disable=too-few-public-methods
+    """Dummy point class."""
+
+    def __init__(self, x_val: int, y_val: int) -> None:
+        self.x_val: int = x_val
+        self.y_val: int = y_val
+
 
 @type_checked_call
 class NestedDecorated:  # pylint: disable=too-few-public-methods
     """Dummy class with a non-primitive member."""
 
-    def __init__(self, pos: Point) -> None:
-        self.pos: Point = pos
+    def __init__(self, pos: PointDecorated,
+                 opt_pos2: Optional[PointDecorated],
+                 pos_list: List[PointDecorated]) -> None:
+        self.pos: PointDecorated = pos
+        self.opt_pos2: Optional[PointDecorated] = opt_pos2
+        self.pos_list: List[PointDecorated] = pos_list
 
 
 class TestUnpackingNested(unittest.TestCase):
@@ -471,11 +483,41 @@ class TestUnpackingNested(unittest.TestCase):
         nested: Nested = type_checked_apply(Nested, **json.loads(object_repr))
         self.check_result(nested)
 
+    def test_ok_decorated(self) -> None:
+        """Valid JSON string."""
+        object_repr = '''{
+                "pos": {"x_val": 1, "y_val": 2},
+                "opt_pos2": {"x_val": 3, "y_val": 4},
+                "pos_list": [{"x_val": 3, "y_val": 4}]
+            }'''
+        nested_decorated: NestedDecorated = NestedDecorated(**json.loads(object_repr))
+        self.check_result(nested_decorated)
+
+    def test_ok_decorated_opt_none(self) -> None:
+        """Valid JSON string."""
+        object_repr = '{"pos": {"x_val": 1, "y_val": 2}, "opt_pos2": null, "pos_list": []}'
+        nested_decorated: NestedDecorated = NestedDecorated(**json.loads(object_repr))
+        self.check_result(nested_decorated)
+
+    def test_ok_decorated_opt_missing(self) -> None:
+        """Valid JSON string."""
+        object_repr = '{"pos": {"x_val": 1, "y_val": 2}, "pos_list": []}'
+        nested_decorated: NestedDecorated = NestedDecorated(**json.loads(object_repr))
+        self.check_result(nested_decorated)
+
     def test_ok_nested_already_objects(self) -> None:
         """Valid JSON string."""
         object_dict = {"pos": Point(1, 2), "opt_pos2": Point(3, 4)}
         nested: Nested = type_checked_apply(Nested, **object_dict)
         self.check_result(nested)
+
+    def test_ok_nested_decorated_already_objects(self) -> None:
+        """Valid JSON string."""
+        object_dict = {"pos": PointDecorated(1, 2),
+                       "opt_pos2": PointDecorated(3, 4),
+                       "pos_list": [PointDecorated(5, 6)]}
+        nested_decorated: NestedDecorated = NestedDecorated(**object_dict)
+        self.check_result(nested_decorated)
 
     def test_ok_nested_already_objects_opt_none(self) -> None:
         """Valid JSON string."""
@@ -497,13 +539,13 @@ class TestUnpackingNested(unittest.TestCase):
 
     def test_ok_decorated(self) -> None:
         """Valid JSON string."""
-        object_repr = '{"pos": {"x_val": 1, "y_val": 2}}'
+        object_repr = '{"pos": {"x_val": 1, "y_val": 2}, "pos_list": []}'
         nested: NestedDecorated = NestedDecorated(**json.loads(object_repr))
         self.check_result(nested)
 
     def test_from_dict_decorated(self) -> None:
         """Valid JSON string."""
-        data = {"pos": Point(1, 2)}
+        data = {"pos": PointDecorated(1, 2), "pos_list": []}
         nested: NestedDecorated = NestedDecorated(**data)
         self.check_result(nested)
 
