@@ -21,6 +21,9 @@ TypeT = TypeVar('TypeT')
 class _WrappedFunction:
     def __init__(self, func: Callable[..., TypeT],
                  skip: bool, convert: bool) -> None:
+        if _is_member_function(func):
+            raise TypeError('Decorated member functions not yet supported. '
+                            'Use type_checked_apply when calling instead.')
         self._skip: bool = skip
         self._convert: bool = convert
         self._func: Callable[..., TypeT] = func
@@ -407,3 +410,10 @@ def __get_undictify_wrapped_func(func: _WrappedFunction) -> Callable[..., Any]:
 
 def __is_instance(value: TypeT, the_type: Callable[..., TypeT]) -> bool:
     return isinstance(value, the_type)  # type: ignore
+
+
+def _is_member_function(func: Callable[..., TypeT]) -> bool:
+    signature = inspect.signature(func)
+    param_names = [param.name for param in signature.parameters.values()]
+    assert param_names
+    return param_names[0] == 'self'

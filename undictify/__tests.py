@@ -716,6 +716,53 @@ class TestUnpackingWithList(unittest.TestCase):
             type_checked_apply(WithLists, **json.loads(object_repr))
 
 
+class WithMemberFunc:  # pylint: disable=too-few-public-methods
+    """Dummy class with a Union member."""
+
+    def __init__(self, val_1: int, val_2: int) -> None:
+        self.val_1: int = val_1
+        self.val_2: int = val_2
+
+    def member_func(self, msg: str) -> str:
+        """Return value sum as string with message concatenated."""
+        return str(self.val_1 + self.val_2) + msg
+
+
+class TestUnpackingWithMemberFunc(unittest.TestCase):
+    """Make sure member functions work too."""
+
+    def test_ok(self) -> None:
+        """Valid data dict."""
+        data = {'val_1': 40, 'val_2': 2}
+        with_member_func = type_checked_apply(WithMemberFunc, **data)
+        result = type_checked_apply(with_member_func.member_func, 'hello')
+        self.assertEqual(result, '42hello')
+
+    def test_invalid_type(self) -> None:
+        """Incorrect type."""
+        data = {'val_1': 40, 'val_2': 2}
+        with_member_func = type_checked_apply(WithMemberFunc, **data)
+        with self.assertRaises(TypeError):
+            type_checked_apply(with_member_func.member_func, 3)
+
+    def test_ok_decorated(self) -> None:
+        """Valid data dict."""
+
+        with self.assertRaises(TypeError):
+            @type_checked_call
+            class WithMemberFuncDecorated:  # pylint: disable=too-few-public-methods,unused-variable
+                """Dummy class with a Union member."""
+
+                def __init__(self, val_1: int, val_2: int) -> None:
+                    self.val_1: int = val_1
+                    self.val_2: int = val_2
+
+                @type_checked_call
+                def member_func(self, msg: str) -> str:
+                    """Return value sum as string with message concatenated."""
+                    return str(self.val_1 + self.val_2) + msg
+
+
 class WithUnion:  # pylint: disable=too-few-public-methods
     """Dummy class with a Union member."""
 
