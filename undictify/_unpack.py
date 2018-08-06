@@ -200,25 +200,25 @@ def __unpack_dict(func: Union[_WrappedFunction, Callable[..., TypeT]],
         else func(**ctor_params)
 
 
-def __get_value(target_type: WrappedOrFunc, value: Any, log_name: str,
+def __get_value(func: WrappedOrFunc, value: Any, log_name: str,
                 skip_superfluous: bool, convert_types: bool) -> Any:
     """Convert a single value into target type if possible."""
     if __is_list(value):
-        return __get_list_value(target_type, value, log_name,
+        return __get_list_value(func, value, log_name,
                                 skip_superfluous, convert_types)
 
     if __is_dict(value):
-        return __get_dict_value(target_type, value,
+        return __get_dict_value(func, value,
                                 skip_superfluous, convert_types)
 
-    if isinstance(target_type, _WrappedFunction):
-        __get_undictify_wrapped_func_value(target_type, value)
+    if isinstance(func, _WrappedFunction):
+        __get_undictify_wrapped_func_value(func, value)
 
-    allowed_types = list(map(__unwrap_decorator_type, __get_union_types(target_type) \
-        if __is_optional_type(target_type) \
-        else [target_type]))
+    allowed_types = list(map(__unwrap_decorator_type, __get_union_types(func) \
+        if __is_optional_type(func) \
+        else [func]))
 
-    if target_type is inspect.Parameter.empty:
+    if func is inspect.Parameter.empty:
         raise TypeError(f'Parameter {log_name} of target function '
                         'is missing a type annotation.')
 
@@ -226,51 +226,51 @@ def __get_value(target_type: WrappedOrFunc, value: Any, log_name: str,
         if not __isinstanceofone(value, allowed_types):
             value_type = type(value)
             if convert_types:
-                if __is_optional_type(target_type):
-                    target_type = __get_optional_type(target_type)
+                if __is_optional_type(func):
+                    func = __get_optional_type(func)
                 try:
-                    return target_type(value)
+                    return func(value)
                 except ValueError:
                     raise TypeError(f'Can not convert {value} '
                                     f'from type {__get_type_name(value_type)} '
-                                    f'into type {__get_type_name(target_type)} '
+                                    f'into type {__get_type_name(func)} '
                                     f'for key {log_name}.')
 
             raise TypeError(f'Key {log_name} has incorrect type: '
                             f'{__get_type_name(value_type)} instead of '
-                            f'{__get_type_name(target_type)}.')
+                            f'{__get_type_name(func)}.')
 
     return value
 
 
-def __get_list_value(target_type: Callable[..., TypeT], value: Any,
+def __get_list_value(func: Callable[..., TypeT], value: Any,
                      log_name: str,
                      skip_superfluous: bool, convert_types: bool) -> Any:
-    if not __is_list_type(target_type) and \
-            not __is_optional_list_type(target_type):
+    if not __is_list_type(func) and \
+            not __is_optional_list_type(func):
         raise TypeError(f'No list expected for {log_name}')
-    target_elems = []
-    target_elem_type = __get_list_type_elem_type(target_type)
+    result = []
+    result_elem_type = __get_list_type_elem_type(func)
     for elem in value:
-        target_elems.append(__get_value(target_elem_type,
-                                        elem, value,
-                                        skip_superfluous, convert_types))
-    return target_elems
+        result.append(__get_value(result_elem_type,
+                                  elem, value,
+                                  skip_superfluous, convert_types))
+    return result
 
 
-def __get_dict_value(target_type: Callable[..., TypeT], value: Any,
+def __get_dict_value(func: Callable[..., TypeT], value: Any,
                      skip_superfluous: bool, convert_types: bool) -> Any:
-    if __is_optional_type(target_type):
-        return __unpack_dict(__get_optional_type(target_type),
+    if __is_optional_type(func):
+        return __unpack_dict(__get_optional_type(func),
                              value, skip_superfluous, convert_types)
-    return __unpack_dict(target_type, value, skip_superfluous, convert_types)
+    return __unpack_dict(func, value, skip_superfluous, convert_types)
 
 
-def __get_undictify_wrapped_func_value(target_type: _WrappedFunction,
+def __get_undictify_wrapped_func_value(func: _WrappedFunction,
                                        value: Any) -> Any:
     if __is_dict(value):
-        return target_type(**value)
-    wrapped_function = target_type.get_wrapped_function()
+        return func(**value)
+    wrapped_function = func.get_wrapped_function()
     if __is_instance(value, wrapped_function):
         return value
     return wrapped_function(value)
@@ -327,7 +327,7 @@ def __get_union_types(union_type: Callable[..., TypeT]) -> List[Callable[..., Ty
     return union_type.__args__  # type: ignore
 
 
-def __get_optional_type(optional_type: Callable[..., TypeT]) -> Type[Any]:
+def __get_optional_type(optional_type: Callable[..., TypeT]) -> Type[TypeT]:
     """Return the type an Optional can hold."""
     assert __is_optional_type(optional_type)
     args = optional_type.__args__  # type: ignore

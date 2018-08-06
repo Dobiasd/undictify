@@ -152,124 +152,124 @@ class TestUnpackingFoo(unittest.TestCase):  # pylint: disable=too-many-public-me
         self.assertEqual(the_foo.flag, True)
         self.assertEqual(the_foo.opt, opt_val)
 
-    def do_test_dict(self, target_func: Callable[..., TypeT],
+    def do_test_dict(self, func: Callable[..., TypeT],
                      decorated: bool) -> None:
         """Valid data dict."""
         data = {
             "val": 42, "msg": "hello", "frac": 3.14, "flag": True, "opt": 10}
         if not decorated:
-            a_foo = type_checked_apply(target_func, **data)
+            a_foo = type_checked_apply(func, **data)
         else:
-            a_foo = target_func(**data)
+            a_foo = func(**data)
         self.check_result(a_foo, 10)
 
-    def do_test_ok(self, target_func: Callable[..., TypeT],
+    def do_test_ok(self, func: Callable[..., TypeT],
                    decorated: bool) -> None:
         """Valid JSON string."""
         object_repr = '{"val": 42, "msg": "hello", "frac": 3.14, ' \
                       '"flag": true, "opt": 10}'
         if not decorated:
-            a_foo = type_checked_apply(target_func, **json.loads(object_repr))
+            a_foo = type_checked_apply(func, **json.loads(object_repr))
         else:
-            a_foo = target_func(**json.loads(object_repr))
+            a_foo = func(**json.loads(object_repr))
         self.check_result(a_foo, 10)
 
-    def do_test_opt_null(self, target_func: Callable[..., TypeT],
+    def do_test_opt_null(self, func: Callable[..., TypeT],
                          decorated: bool) -> None:
         """Valid JSON string null for the optional member."""
         object_repr = '{"val": 42, "msg": "hello", "frac": 3.14, ' \
                       '"flag": true, "opt": null}'
         if not decorated:
-            a_foo = type_checked_apply(target_func, **json.loads(object_repr))
+            a_foo = type_checked_apply(func, **json.loads(object_repr))
         else:
-            a_foo = target_func(**json.loads(object_repr))
+            a_foo = func(**json.loads(object_repr))
         self.check_result(a_foo, None)
 
-    def do_test_additional(self, target_func: Callable[..., TypeT],
+    def do_test_additional(self, func: Callable[..., TypeT],
                            decorated: bool) -> None:
         """Valid JSON string with an additional field."""
         object_repr = '{"val": 42, "msg": "hello", "frac": 3.14, ''' \
                       '"flag": true, "opt": 10, "ignore": 1}'
         if not decorated:
-            a_foo = type_checked_apply_skip(target_func, **json.loads(object_repr))
+            a_foo = type_checked_apply_skip(func, **json.loads(object_repr))
         else:
-            a_foo = target_func(**json.loads(object_repr))
+            a_foo = func(**json.loads(object_repr))
         self.check_result(a_foo, 10)
 
-    def do_test_convert_ok(self, target_func: Callable[..., TypeT],
+    def do_test_convert_ok(self, func: Callable[..., TypeT],
                            decorated: bool) -> None:
         """Valid JSON string."""
         object_repr = '{"val": "42", "msg": 5, "frac": 3, ' \
                       '"flag": true, "opt": 10.1}'
         if not decorated:
-            a_foo = type_checked_apply_convert(target_func, **json.loads(object_repr))
+            a_foo = type_checked_apply_convert(func, **json.loads(object_repr))
         else:
-            a_foo = target_func(**json.loads(object_repr))
+            a_foo = func(**json.loads(object_repr))
         self.check_result(a_foo, 10, 3.0, '5')
 
-    def do_test_additional_and_convert(self, target_func: Callable[..., TypeT],
+    def do_test_additional_and_convert(self, func: Callable[..., TypeT],
                                        decorated: bool) -> None:
         """Valid JSON string with an additional field and one to convert."""
         object_repr = '{"val": "42", "msg": "hello", "frac": 3.14, ''' \
                       '"flag": true, "opt": 10, "ignore": 1}'
         if not decorated:
-            a_foo = type_checked_apply_skip_convert(target_func, **json.loads(object_repr))
+            a_foo = type_checked_apply_skip_convert(func, **json.loads(object_repr))
         else:
-            a_foo = target_func(**json.loads(object_repr))
+            a_foo = func(**json.loads(object_repr))
         self.check_result(a_foo, 10)
 
     @staticmethod
-    def do_test_wrong_opt_type(target_func: Callable[..., TypeT],
+    def do_test_wrong_opt_type(func: Callable[..., TypeT],
                                decorated: bool) -> None:
         """Valid JSON string."""
         object_repr = '{"val": 42, "msg": "hello", "frac": 3.14, ' \
                       '"flag": true, "opt": "wrong"}'
         if not decorated:
-            type_checked_apply(target_func, **json.loads(object_repr))
+            type_checked_apply(func, **json.loads(object_repr))
         else:
-            target_func(**json.loads(object_repr))
+            func(**json.loads(object_repr))
 
     @staticmethod
-    def do_test_convert_error(target_func: Callable[..., TypeT],
+    def do_test_convert_error(func: Callable[..., TypeT],
                               decorated: bool) -> None:
         """Valid JSON string."""
         object_repr = '{"val": "twentyfour", "msg": "hello", "frac": 3.14, ' \
                       '"flag": true, "opt": 10}'
         if not decorated:
-            type_checked_apply_convert(target_func, **json.loads(object_repr))
+            type_checked_apply_convert(func, **json.loads(object_repr))
         else:
-            target_func(**json.loads(object_repr))
+            func(**json.loads(object_repr))
 
     @staticmethod
-    def do_test_missing(target_func: Callable[..., TypeT],
+    def do_test_missing(func: Callable[..., TypeT],
                         decorated: bool) -> None:
         """Invalid JSON string: missing a field."""
         object_repr = '{"val": 42, "msg": "hello", "opt": 10, "flag": true}'
         if not decorated:
-            type_checked_apply(target_func, **json.loads(object_repr))
+            type_checked_apply(func, **json.loads(object_repr))
         else:
-            target_func(**json.loads(object_repr))
+            func(**json.loads(object_repr))
 
-    def do_test_opt_missing(self, target_func: Callable[..., TypeT],
+    def do_test_opt_missing(self, func: Callable[..., TypeT],
                             decorated: bool) -> None:
         """Valid JSON string without providing value for optional member."""
         object_repr = '{"val": 42, "msg": "hello", "frac": 3.14, "flag": true}'
         if not decorated:
-            a_foo = type_checked_apply(target_func, **json.loads(object_repr))
+            a_foo = type_checked_apply(func, **json.loads(object_repr))
         else:
-            a_foo = target_func(**json.loads(object_repr))
+            a_foo = func(**json.loads(object_repr))
         self.check_result(a_foo, None)
 
     @staticmethod
-    def do_test_incorrect_type(target_func: Callable[..., TypeT],
+    def do_test_incorrect_type(func: Callable[..., TypeT],
                                decorated: bool) -> None:
         """Invalid JSON string: incorrect type of a field."""
         object_repr = '{"val": 42, "msg": "hello", "opt": 10, ' \
                       '"frac": "incorrect", "flag": true}'
         if not decorated:
-            type_checked_apply(target_func, **json.loads(object_repr))
+            type_checked_apply(func, **json.loads(object_repr))
         else:
-            target_func(**json.loads(object_repr))
+            func(**json.loads(object_repr))
 
     def do_test_function_with_targets(self, func: Callable[..., TypeT],
                                       targets: List[Tuple[Any,
