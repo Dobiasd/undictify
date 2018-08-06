@@ -186,7 +186,7 @@ def __get_value(target_type: Callable[..., TypeT], value: Any, log_name: str,
 
     if Any not in allowed_types:
         if not __isinstanceofone(value, allowed_types):
-            json_type = type(value)
+            value_type = type(value)
             if convert_types:
                 if __is_optional_type(target_type):
                     target_type = __get_optional_type(target_type)
@@ -194,12 +194,12 @@ def __get_value(target_type: Callable[..., TypeT], value: Any, log_name: str,
                     return target_type(value)
                 except ValueError:
                     raise TypeError(f'Can not convert {value} '
-                                    f'from type {__get_type_name(json_type)} '
+                                    f'from type {__get_type_name(value_type)} '
                                     f'into type {__get_type_name(target_type)} '
                                     f'for key {log_name}.')
 
             raise TypeError(f'Key {log_name} has incorrect type: '
-                            f'{__get_type_name(json_type)} instead of '
+                            f'{__get_type_name(value_type)} instead of '
                             f'{__get_type_name(target_type)}.')
 
     return value
@@ -370,9 +370,9 @@ def __get_undictify_wrapped_func(the_type: Callable[..., TypeT]) -> Callable[...
     return result #  type: ignore
 
 
-def __set_undictify_wrapped_func(func: Callable[..., TypeT],
+def __set_undictify_wrapped_func(wrapping_func: Callable[..., TypeT],
                                  wrapped_func: Callable[..., Any]) -> Callable[..., TypeT]:
     # pylint: disable=protected-access
-    func.__undictify_wrapped_func = wrapped_func #  type: ignore
+    wrapping_func.__undictify_wrapped_func = wrapped_func #  type: ignore
     # pylint: enable=protected-access
-    return func
+    return wrapping_func
