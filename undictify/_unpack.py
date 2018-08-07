@@ -18,131 +18,141 @@ else:
 TypeT = TypeVar('TypeT')
 
 
-class _WrappedFunction:
-    def __init__(self, func: Callable[..., TypeT],
-                 skip: bool, convert: bool) -> None:
-        if _is_member_function(func):
-            raise TypeError('Decorated member functions not yet supported. '
-                            'Use type_checked_apply when calling instead.')
-        self._skip: bool = skip
-        self._convert: bool = convert
-        self._func: Callable[..., TypeT] = func
-
-    def __call__(self, *args: Any, **kwargs: Any) -> Any:
-        return _type_checked_apply_wrapped(self, *args, **kwargs)
-
-    def call_wrapped(self, *args: Any, **kwargs: Any) -> Any:
-        """Call the wrapped function without any further preprocessing."""
-        return self.get_wrapped_function()(*args, **kwargs)
-
-    def get_wrapped_function(self) -> Callable[..., TypeT]:
-        """Returns the actual function being called."""
-        return self._func
-
-    def get_skip(self) -> bool:
-        """Is skip flag set?"""
-        return self._skip
-
-    def get_convert(self) -> bool:
-        """Is convert flag set?"""
-        return self._convert
-
-
-WrappedOrFunc = Union[_WrappedFunction, Callable[..., TypeT]]
-
-
-def __create_wrapped_function(func: WrappedOrFunc,
-                              skip: bool, convert: bool) -> _WrappedFunction:
-    """Return input function with new parameters if already wrapped."""
-    if isinstance(func, _WrappedFunction):
-        return __wrapped_function_with_new_params(func, skip, convert)
-    return _WrappedFunction(func, skip, convert)
-
-
-def __wrapped_function_with_new_params(wrapped_func: _WrappedFunction,
-                                       skip: bool, convert: bool) -> _WrappedFunction:
-    return __create_wrapped_function(wrapped_func.get_wrapped_function(), skip, convert)
-
-
-def _type_checked_apply_wrapped(wrapped_func: _WrappedFunction,
-                                *args: Any, **kwargs: Any) -> Any:
-    """Type check the arguments of a function call."""
-    return __unpack_dict(wrapped_func,
-                         __merge_args_and_kwargs(wrapped_func.get_wrapped_function(),
-                                                 *args, **kwargs),
-                         wrapped_func.get_skip(), wrapped_func.get_convert())
-
-
-def type_checked_call(func: Callable[..., TypeT]) -> _WrappedFunction:
+class type_checked_call:  # pylint: disable=invalid-name
     """Decorator that type checks arguments to every call of a function."""
 
-    return __create_wrapped_function(func, False, False)
+    def __init__(self, func: Callable[..., TypeT]) -> None:
+        if _is_wrapped_func(func):
+            self._func: Callable[..., TypeT] = func.get_wrapped_func()  # type: ignore
+        self._func: Callable[..., TypeT] = func
+        self._is_undictify_wrapper_class = True
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        return _unpack_dict(self.get_wrapped_func(),
+                            _merge_args_and_kwargs(self.get_wrapped_func(),
+                                                   *args, **kwargs),
+                            False, False)
+
+    def get_wrapped_func(self) -> Callable[..., TypeT]:
+        """The actual function being called."""
+        return self._func
 
 
-def type_checked_call_skip(func: Callable[..., TypeT]) -> _WrappedFunction:
+class type_checked_call_skip:  # pylint: disable=invalid-name
     """Decorator that type checks arguments to every call of a function.
     It skips all keyword arguments that the function does not take."""
 
-    return __create_wrapped_function(func, True, False)
+    def __init__(self, func: Callable[..., TypeT]) -> None:
+        if _is_wrapped_func(func):
+            self._func: Callable[..., TypeT] = func.get_wrapped_func()  # type: ignore
+        self._func: Callable[..., TypeT] = func
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        return _unpack_dict(self.get_wrapped_func(),
+                            _merge_args_and_kwargs(self.get_wrapped_func(),
+                                                   *args, **kwargs),
+                            True, False)
+
+    def get_wrapped_func(self) -> Callable[..., TypeT]:
+        """The actual function being called."""
+        return self._func
 
 
-def type_checked_call_convert(func: Callable[..., TypeT]) -> _WrappedFunction:
+class type_checked_call_convert:  # pylint: disable=invalid-name
     """Decorator that type checks arguments to every call of a function.
     It converts arguments into target types of parameters if possible."""
 
-    return __create_wrapped_function(func, False, True)
+    def __init__(self, func: Callable[..., TypeT]) -> None:
+        if _is_wrapped_func(func):
+            self._func: Callable[..., TypeT] = func.get_wrapped_func()  # type: ignore
+        self._func: Callable[..., TypeT] = func
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        return _unpack_dict(self.get_wrapped_func(),
+                            _merge_args_and_kwargs(self.get_wrapped_func(),
+                                                   *args, **kwargs),
+                            False, True)
+
+    def get_wrapped_func(self) -> Callable[..., TypeT]:
+        """The actual function being called."""
+        return self._func
 
 
-def type_checked_call_skip_convert(func: Callable[..., TypeT]) -> _WrappedFunction:
+class type_checked_call_skip_convert:  # pylint: disable=invalid-name
     """Decorator that type checks arguments to every call of a function.
     It skips all keyword arguments that the function does not take and
     converts arguments into target types of parameters if possible."""
 
-    return __create_wrapped_function(func, True, True)
+    def __init__(self, func: Callable[..., TypeT]) -> None:
+        if _is_wrapped_func(func):
+            self._func: Callable[..., TypeT] = func.get_wrapped_func()  # type: ignore
+        self._func: Callable[..., TypeT] = func
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        return _unpack_dict(self.get_wrapped_func(),
+                            _merge_args_and_kwargs(self.get_wrapped_func(),
+                                                   *args, **kwargs),
+                            True, True)
+
+    def get_wrapped_func(self) -> Callable[..., TypeT]:
+        """The actual function being called."""
+        return self._func
+
+
+WrappedFunc = Union[type_checked_call,
+                    type_checked_call_skip,
+                    type_checked_call_convert,
+                    type_checked_call_skip_convert]
+
+WrappedOrFunc = Union[WrappedFunc,
+                      Callable[..., TypeT]]
+
+
+def _is_wrapped_func(func: WrappedOrFunc) -> bool:
+    return isinstance(func, (type_checked_call,
+                             type_checked_call_skip,
+                             type_checked_call_convert,
+                             type_checked_call_skip_convert))
 
 
 def type_checked_apply(func: WrappedOrFunc,
                        *args: Any, **kwargs: Any) -> Any:
     """Type check the arguments of a function call."""
-    if isinstance(func, _WrappedFunction):
-        __wrapped_function_with_new_params(func, False, False)(*args, **kwargs)
-    return __create_wrapped_function(func, False, False)(*args, **kwargs)
+    return type_checked_call(func)(*args, **kwargs)
 
 
 def type_checked_apply_skip(func: WrappedOrFunc,
                             *args: Any, **kwargs: Any) -> Any:
     """Type check the arguments of a function call.
     Skips all keyword arguments that the function does not take."""
-    if isinstance(func, _WrappedFunction):
-        __wrapped_function_with_new_params(func, True, False)(*args, **kwargs)
-    return __create_wrapped_function(func, True, False)(*args, **kwargs)
+    return type_checked_call_skip(func)(*args, **kwargs)
 
 
 def type_checked_apply_convert(func: WrappedOrFunc,
                                *args: Any, **kwargs: Any) -> Any:
     """Type check the arguments of a function call.
     Convert arguments into target types of parameters if possible."""
-    if isinstance(func, _WrappedFunction):
-        __wrapped_function_with_new_params(func, False, True)(*args, **kwargs)
-    return __create_wrapped_function(func, False, True)(*args, **kwargs)
+    return type_checked_call_convert(func)(*args, **kwargs)
 
 
 def type_checked_apply_skip_convert(func: WrappedOrFunc,
                                     *args: Any, **kwargs: Any) -> Any:
-    """Decorator that type checks arguments to every call of a function.
+    """Type check the arguments of a function call.
     Skips all keyword arguments that the function does not take and
     convert arguments into target types of parameters if possible."""
-    if isinstance(func, _WrappedFunction):
-        __wrapped_function_with_new_params(func, True, True)(*args, **kwargs)
-    return __create_wrapped_function(func, True, True)(*args, **kwargs)
+    return type_checked_call_skip_convert(func)(*args, **kwargs)
 
 
-def __merge_args_and_kwargs(func: Callable[..., TypeT],
-                            *args: Any, **kwargs: Any) -> Dict[str, Any]:
+def _merge_args_and_kwargs(func: Callable[..., TypeT],
+                           *args: Any, **kwargs: Any) -> Dict[str, Any]:
     """Returns one kwargs dictionary or
     raises an exeption in case of overlapping-name problems."""
     signature = inspect.signature(func)
     param_names = [param.name for param in signature.parameters.values()]
+    if 'self' in param_names:
+        assert param_names[0] == 'self'
+        raise TypeError('Decorated member functions not yet supported. '
+                        'Use type_checked_apply when calling instead.')
     if len(args) > len(param_names):
         raise ValueError(f'Too many parameters for {func.__name__}.')
     args_as_kwargs = dict(zip(param_names, list(args)))
@@ -156,17 +166,15 @@ def __merge_args_and_kwargs(func: Callable[..., TypeT],
     return {**args_as_kwargs, **kwargs}
 
 
-def __unpack_dict(func: Union[_WrappedFunction, Callable[..., TypeT]],
-                  data: Dict[str, Any],
-                  skip_superfluous: bool,
-                  convert_types: bool) -> Any:
+def _unpack_dict(func: WrappedOrFunc,
+                 data: Dict[str, Any],
+                 skip_superfluous: bool,
+                 convert_types: bool) -> Any:
     """Constructs an object in a type-safe way from a dictionary."""
 
     assert __is_dict(data), 'Argument data needs to be a dictionary.'
 
-    signature = inspect.signature(func.get_wrapped_function()) \
-        if isinstance(func, _WrappedFunction) \
-        else inspect.signature(func)
+    signature = inspect.signature(__unwrap_decorator_type(func))
     ctor_params: Dict[str, Any] = {}
 
     if not skip_superfluous:
@@ -198,9 +206,7 @@ def __unpack_dict(func: Union[_WrappedFunction, Callable[..., TypeT]],
                                                   skip_superfluous,
                                                   convert_types)
 
-    return func.call_wrapped(**ctor_params) \
-        if isinstance(func, _WrappedFunction) \
-        else func(**ctor_params)
+    return __unwrap_decorator_type(func)(**ctor_params)
 
 
 def __get_value(func: WrappedOrFunc, value: Any, log_name: str,
@@ -213,9 +219,6 @@ def __get_value(func: WrappedOrFunc, value: Any, log_name: str,
     if __is_dict(value):
         return __get_dict_value(func, value,
                                 skip_superfluous, convert_types)
-
-    if isinstance(func, _WrappedFunction):
-        __get_undictify_wrapped_func_value(func, value)
 
     allowed_types = list(map(__unwrap_decorator_type, __get_union_types(func) \
         if __is_optional_type(func) \
@@ -264,19 +267,9 @@ def __get_list_value(func: Callable[..., TypeT], value: Any,
 def __get_dict_value(func: Callable[..., TypeT], value: Any,
                      skip_superfluous: bool, convert_types: bool) -> Any:
     if __is_optional_type(func):
-        return __unpack_dict(__get_optional_type(func),
-                             value, skip_superfluous, convert_types)
-    return __unpack_dict(func, value, skip_superfluous, convert_types)
-
-
-def __get_undictify_wrapped_func_value(func: _WrappedFunction,
-                                       value: Any) -> Any:
-    if __is_dict(value):
-        return func(**value)
-    wrapped_function = func.get_wrapped_function()
-    if __is_instance(value, wrapped_function):
-        return value
-    return wrapped_function(value)
+        return _unpack_dict(__get_optional_type(func),
+                            value, skip_superfluous, convert_types)
+    return _unpack_dict(func, value, skip_superfluous, convert_types)
 
 
 def __is_union_type(the_type: Callable[..., TypeT]) -> bool:
@@ -389,31 +382,12 @@ def __is_list(value: TypeT) -> bool:
     return isinstance(value, list)
 
 
-def __unwrap_decorator_type(the_type: WrappedOrFunc) -> Callable[..., Any]:
+def __unwrap_decorator_type(func: WrappedOrFunc) -> Callable[..., Any]:
     """Get the actual type returned by the internal wrapper"""
-    try:
-        if isinstance(the_type, _WrappedFunction):
-            return the_type.get_wrapped_function()
-        return the_type
-    except TypeError:
-        return the_type
-
-
-def __is_undictify_wrapped_func(the_type: Callable[..., TypeT]) -> bool:
-    return __is_instance(the_type, _WrappedFunction)
-
-
-def __get_undictify_wrapped_func(func: _WrappedFunction) -> Callable[..., Any]:
-    assert __is_undictify_wrapped_func(func)
-    return func.get_wrapped_function()
+    if _is_wrapped_func(func):
+        return func.get_wrapped_func()  # type: ignore
+    return func
 
 
 def __is_instance(value: TypeT, the_type: Callable[..., TypeT]) -> bool:
     return isinstance(value, the_type)  # type: ignore
-
-
-def _is_member_function(func: Callable[..., TypeT]) -> bool:
-    signature = inspect.signature(func)
-    param_names = [param.name for param in signature.parameters.values()]
-    assert param_names
-    return param_names[0] == 'self'

@@ -728,6 +728,20 @@ class WithMemberFunc:  # pylint: disable=too-few-public-methods
         return str(self.val_1 + self.val_2) + msg
 
 
+@type_checked_call
+class WithMemberFuncDecorated:  # pylint: disable=too-few-public-methods,unused-variable
+    """Dummy class with a Union member."""
+
+    def __init__(self, val_1: int, val_2: int) -> None:
+        self.val_1: int = val_1
+        self.val_2: int = val_2
+
+    @type_checked_call
+    def member_func(self, msg: str) -> str:
+        """Return value sum as string with message concatenated."""
+        return str(self.val_1 + self.val_2) + msg
+
+
 class TestUnpackingWithMemberFunc(unittest.TestCase):
     """Make sure member functions work too."""
 
@@ -747,20 +761,11 @@ class TestUnpackingWithMemberFunc(unittest.TestCase):
 
     def test_ok_decorated(self) -> None:
         """Valid data dict."""
-
+        data = {'val_1': 40, 'val_2': 2}
+        with_member_func = WithMemberFuncDecorated(**data)
         with self.assertRaises(TypeError):
-            @type_checked_call
-            class WithMemberFuncDecorated:  # pylint: disable=too-few-public-methods,unused-variable
-                """Dummy class with a Union member."""
-
-                def __init__(self, val_1: int, val_2: int) -> None:
-                    self.val_1: int = val_1
-                    self.val_2: int = val_2
-
-                @type_checked_call
-                def member_func(self, msg: str) -> str:
-                    """Return value sum as string with message concatenated."""
-                    return str(self.val_1 + self.val_2) + msg
+            result = with_member_func.member_func('hello')
+            self.assertEqual(result, '42hello')
 
 
 class WithUnion:  # pylint: disable=too-few-public-methods
