@@ -238,6 +238,32 @@ value: Any = '3'
 resutl = type_checked_apply(times_two, value)
 ```
 
+So in general you can decide between checking every call (by adding a `@type_checked_call_*` annotation)
+and checking single calls (by wrapping them with `type_checked_apply_*`).
+
+For both versions you can choose if superfluous keyword arguments should lead to an error or should be skipped silently: 
+
+|       settings |                    all calls |                       single call |
+| --------------:| ----------------------------:| ---------------------------------:|
+|                | `@type_checked_call`         | `type_checked_apply`              |
+|           skip | `@type_checked_call_skip`    | `type_checked_apply_skip`         |
+|        convert | `@type_checked_call_convert` | `type_checked_apply_convert`      |
+| skip + convert | `@type_checked_call_skip`    | `type_checked_apply_skip_convert` |
+
+In case you use an annotation *and* a wrapped call,
+the settings of the wrapped call overwrite the settings of the annotation temporarily:
+
+```python
+@type_checked_call_skip
+def foo(bar: int, baz: str) -> None:
+    pass
+
+data = {...}
+foo(data) # skip: yes; convert: no
+type_checked_apply_convert(foo, data) # skip: no; convert: yes
+foo(data) # skip: yes; convert: no
+```
+
 
 Requirements and Installation
 -----------------------------
