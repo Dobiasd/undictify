@@ -458,6 +458,15 @@ class PointDecorated:  # pylint: disable=too-few-public-methods
         self.y_val: int = y_val
 
 
+@type_checked_call_skip
+class PointDecoratedSkip:  # pylint: disable=too-few-public-methods
+    """Dummy point class."""
+
+    def __init__(self, x_val: int, y_val: int) -> None:
+        self.x_val: int = x_val
+        self.y_val: int = y_val
+
+
 @type_checked_call
 class NestedDecorated:  # pylint: disable=too-few-public-methods
     """Dummy class with a non-primitive member."""
@@ -468,6 +477,15 @@ class NestedDecorated:  # pylint: disable=too-few-public-methods
         self.pos: PointDecorated = pos
         self.opt_pos2: Optional[PointDecorated] = opt_pos2
         self.pos_list: List[PointDecorated] = pos_list
+
+
+@type_checked_call_convert
+class NestedDecoratedConvertPointSkip:  # pylint: disable=too-few-public-methods
+    """Dummy class with a non-primitive member."""
+
+    def __init__(self, pos: PointDecoratedSkip, val: int) -> None:
+        self.pos: PointDecoratedSkip = pos
+        self.val: int = val
 
 
 @type_checked_call  # pylint: disable=too-few-public-methods
@@ -492,7 +510,8 @@ class TestUnpackingNested(unittest.TestCase):
 
     def check_result(self, nested: Union[Nested,
                                          NestedDecorated,
-                                         NestedDecoratedNamedTuple]) -> None:
+                                         NestedDecoratedNamedTuple,
+                                         NestedDecoratedConvertPointSkip]) -> None:
         """Validate content of Nested's members."""
         self.assertEqual(nested.pos.x_val, 1)
         self.assertEqual(nested.pos.y_val, 2)
@@ -502,6 +521,20 @@ class TestUnpackingNested(unittest.TestCase):
         object_repr = '{"pos": {"x_val": 1, "y_val": 2}, "opt_pos2": {"x_val": 3, "y_val": 4}}'
         nested: Nested = type_checked_apply(Nested, **json.loads(object_repr))
         self.check_result(nested)
+
+    def test_superfluous_error_nested(self) -> None:
+        """Should use plain ctor of nested and thus error."""
+        object_repr = '''{"pos": {"x_val": 1, "y_val": 2, "too_much": 42},
+                         "opt_pos2": {"x_val": 3, "y_val": 4}}'''
+        with self.assertRaises(TypeError):
+            type_checked_apply(Nested, **json.loads(object_repr))
+
+    def test_superfluous_error_opt_nested(self) -> None:  # pylint: disable=invalid-name
+        """Should use plain ctor of nested and thus error."""
+        object_repr = '''{"pos": {"x_val": 1, "y_val": 2},
+                         "opt_pos2": {"x_val": 3, "y_val": 4, "too_much": 42}}'''
+        with self.assertRaises(TypeError):
+            type_checked_apply(Nested, **json.loads(object_repr))
 
     def test_ok_decorated(self) -> None:
         """Valid JSON string."""
@@ -572,6 +605,25 @@ class TestUnpackingNested(unittest.TestCase):
         data = {"pos": PointDecorated(1, 2), "pos_list": []}
         nested: NestedDecorated = NestedDecorated(**data)  # type: ignore
         self.check_result(nested)
+
+    def test_nested_decorated_differently(self) -> None:  # pylint: disable=invalid-name
+        """Should use settings from inner class for inner ctor"""
+        data = json.loads('{"pos": {"x_val": 1, "y_val": 2, "foo": 4}, "val": "3"}')
+        nested: NestedDecoratedConvertPointSkip = \
+            NestedDecoratedConvertPointSkip(**data)
+        self.check_result(nested)
+
+    def test_nested_decorated_differently_err_inner(self) -> None:  # pylint: disable=invalid-name
+        """Should use settings from inner class for inner ctor"""
+        data = json.loads('{"pos": {"x_val": 1, "y_val": "2"}, "val": 3}')
+        with self.assertRaises(TypeError):
+            NestedDecoratedConvertPointSkip(**data)
+
+    def test_nested_decorated_differently_err_outer(self) -> None:  # pylint: disable=invalid-name
+        """Should use settings from outer class for outer ctor"""
+        data = json.loads('{"pos": {"x_val": 1, "y_val": 2}, "val": 3, "bar": 5}')
+        with self.assertRaises(ValueError):
+            NestedDecoratedConvertPointSkip(**data)
 
 
 @type_checked_call  # pylint: disable=too-few-public-methods

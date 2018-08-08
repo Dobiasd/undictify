@@ -217,8 +217,7 @@ def __get_value(func: WrappedOrFunc, value: Any, log_name: str,
                                 skip_superfluous, convert_types)
 
     if __is_dict(value):
-        return __get_dict_value(func, value,
-                                skip_superfluous, convert_types)
+        return __get_dict_value(func, value) # Use settings of inner value
 
     allowed_types = list(map(__unwrap_decorator_type, __get_union_types(func) \
         if __is_optional_type(func) \
@@ -264,12 +263,11 @@ def __get_list_value(func: Callable[..., TypeT], value: Any,
     return result
 
 
-def __get_dict_value(func: Callable[..., TypeT], value: Any,
-                     skip_superfluous: bool, convert_types: bool) -> Any:
+def __get_dict_value(func: Callable[..., TypeT], value: Any) -> Any:
+    assert __is_dict(value)
     if __is_optional_type(func):
-        return _unpack_dict(__get_optional_type(func),
-                            value, skip_superfluous, convert_types)
-    return _unpack_dict(func, value, skip_superfluous, convert_types)
+        return __get_optional_type(func)(**value)
+    return func(**value)
 
 
 def __is_union_type(the_type: Callable[..., TypeT]) -> bool:
