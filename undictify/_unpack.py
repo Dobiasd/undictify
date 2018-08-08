@@ -266,7 +266,7 @@ def __get_list_value(func: Callable[..., TypeT], value: Any,
 def __get_dict_value(func: Callable[..., TypeT], value: Any) -> Any:
     assert __is_dict(value)
     if __is_optional_type(func):
-        return __get_optional_type(func)(**value)
+        return __get_optional_type(func)(**value)  # type: ignore
     return func(**value)
 
 
