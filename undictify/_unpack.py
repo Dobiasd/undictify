@@ -154,14 +154,14 @@ def _merge_args_and_kwargs(func: Callable[..., TypeT],
         raise TypeError('Decorated member functions not yet supported. '
                         'Use type_checked_apply when calling instead.')
     if len(args) > len(param_names):
-        raise ValueError(f'Too many parameters for {func.__name__}.')
+        raise TypeError(f'Too many parameters for {func.__name__}.')
     args_as_kwargs = dict(zip(param_names, list(args)))
     keys_in_args_and_kwargs = set.intersection(set(args_as_kwargs.keys()),
                                                set(kwargs.keys()))
     if keys_in_args_and_kwargs:
-        raise ValueError(f'The following parameters are given as '
-                         f'arg and kwarg in call of {func.__name__}: '
-                         f'{keys_in_args_and_kwargs}')
+        raise TypeError(f'The following parameters are given as '
+                        f'arg and kwarg in call of {func.__name__}: '
+                        f'{keys_in_args_and_kwargs}')
 
     return {**args_as_kwargs, **kwargs}
 
@@ -182,7 +182,7 @@ def _unpack_dict(func: WrappedOrFunc,
         argument_names = data.keys()
         superfluous = set(argument_names) - set(param_names)
         if superfluous:
-            raise ValueError(f'Superfluous parameters in call: {superfluous}')
+            raise TypeError(f'Superfluous parameters in call: {superfluous}')
 
     for param in signature.parameters.values():
         if param.kind != inspect.Parameter.POSITIONAL_OR_KEYWORD:
@@ -198,7 +198,7 @@ def _unpack_dict(func: WrappedOrFunc,
             if __is_optional_type(param.annotation):
                 ctor_params[param.name] = None
             else:
-                raise ValueError(f'Key {param.name} is missing.')
+                raise TypeError(f'Key {param.name} is missing.')
         else:
             ctor_params[param.name] = __get_value(param.annotation,
                                                   data[param.name],
@@ -217,7 +217,7 @@ def __get_value(func: WrappedOrFunc, value: Any, log_name: str,
                                 skip_superfluous, convert_types)
 
     if __is_dict(value):
-        return __get_dict_value(func, value) # Use settings of inner value
+        return __get_dict_value(func, value)  # Use settings of inner value
 
     allowed_types = list(map(__unwrap_decorator_type, __get_union_types(func) \
         if __is_optional_type(func) \

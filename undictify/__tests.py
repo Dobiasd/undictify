@@ -55,7 +55,7 @@ class TestArgsCalls(unittest.TestCase):  # pylint: disable=too-many-public-metho
     def test_foo_function_positional_and_keyword_duplicates(self) -> None:  # pylint: disable=invalid-name
         """Invalid (overlapping) combination of
         positional arguments and keyword arguments."""
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             type_checked_apply(create_with_two_members, 42, 'hello', val=42)
 
 
@@ -332,9 +332,9 @@ class TestUnpackingFoo(unittest.TestCase):  # pylint: disable=too-many-public-me
             (Foo, False, None),
             (FooNamedTuple, False, None),
             (foo_function, False, None),
-            (foo_function_type_checked_call, True, ValueError),
+            (foo_function_type_checked_call, True, TypeError),
             (foo_function_type_checked_call_skip, True, None),
-            (foo_function_type_checked_call_convert, True, ValueError),
+            (foo_function_type_checked_call_convert, True, TypeError),
             (foo_function_type_checked_call_skip_convert, True, None),
         ])
 
@@ -356,9 +356,9 @@ class TestUnpackingFoo(unittest.TestCase):  # pylint: disable=too-many-public-me
             (Foo, False, None),
             (FooNamedTuple, False, None),
             (foo_function, False, None),
-            (foo_function_type_checked_call, True, ValueError),
+            (foo_function_type_checked_call, True, TypeError),
             (foo_function_type_checked_call_skip, True, TypeError),
-            (foo_function_type_checked_call_convert, True, ValueError),
+            (foo_function_type_checked_call_convert, True, TypeError),
             (foo_function_type_checked_call_skip_convert, True, None),
         ])
 
@@ -393,15 +393,15 @@ class TestUnpackingFoo(unittest.TestCase):  # pylint: disable=too-many-public-me
     def test_missing(self) -> None:
         """Invalid JSON string: missing a field."""
         self.do_test_function_with_targets(self.do_test_missing, [
-            (Foo, False, ValueError),
-            (FooDecorated, True, ValueError),
-            (FooNamedTuple, False, ValueError),
-            (FooNamedTupleDecorated, True, ValueError),
-            (foo_function, False, ValueError),
-            (foo_function_type_checked_call, True, ValueError),
-            (foo_function_type_checked_call_skip, True, ValueError),
-            (foo_function_type_checked_call_convert, True, ValueError),
-            (foo_function_type_checked_call_skip_convert, True, ValueError),
+            (Foo, False, TypeError),
+            (FooDecorated, True, TypeError),
+            (FooNamedTuple, False, TypeError),
+            (FooNamedTupleDecorated, True, TypeError),
+            (foo_function, False, TypeError),
+            (foo_function_type_checked_call, True, TypeError),
+            (foo_function_type_checked_call_skip, True, TypeError),
+            (foo_function_type_checked_call_convert, True, TypeError),
+            (foo_function_type_checked_call_skip_convert, True, TypeError),
         ])
 
     def test_opt_missing(self) -> None:
@@ -622,7 +622,7 @@ class TestUnpackingNested(unittest.TestCase):
     def test_nested_decorated_differently_err_outer(self) -> None:  # pylint: disable=invalid-name
         """Should use settings from outer class for outer ctor"""
         data = json.loads('{"pos": {"x_val": 1, "y_val": 2}, "val": 3, "bar": 5}')
-        with self.assertRaises(ValueError):
+        with self.assertRaises(TypeError):
             NestedDecoratedConvertPointSkip(**data)
 
 
