@@ -1,4 +1,4 @@
-![logo](logo/undictify.png)
+![logo](https://github.com/Dobiasd/undictify/raw/master/logo/undictify.png)
 
 [![Build Status](https://travis-ci.org/Dobiasd/undictify.svg?branch=master)][travis]
 [![(License MIT 1.0)](https://img.shields.io/badge/license-MIT%201.0-blue.svg)][license]
