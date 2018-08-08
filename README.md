@@ -9,7 +9,7 @@
 
 undictify
 =========
-**A Python library enabling type-checked function calls at runtime**
+**Python library providing type-checked function calls at runtime**
 
 
 Table of contents
