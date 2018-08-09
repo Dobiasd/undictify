@@ -433,6 +433,17 @@ class TestUnpackingFoo(unittest.TestCase):  # pylint: disable=too-many-public-me
         ])
 
 
+class TestApplyOnDecorated(unittest.TestCase):
+    """Tests call of type_checked_apply on already decorated function."""
+
+    def test_double_wrapping(self) -> None:
+        """Should error to avoid confusion."""
+        data = {
+            "val": 42, "msg": "hello", "frac": 3.14, "flag": True, "opt": 10}
+        with self.assertRaises(TypeError):
+            type_checked_apply(foo_function_type_checked_call, **data)
+
+
 class Point:  # pylint: disable=too-few-public-methods
     """Dummy point class."""
 
@@ -673,9 +684,7 @@ class TestUnpackingHuman(unittest.TestCase):
     def test_ok_type_checked_apply_on_decorated(self) -> None:  # pylint: disable=invalid-name
         """Valid JSON string."""
         human: Human = Human(**json.loads(self.get_object_repr()))
-        human_2: Human = type_checked_apply(Human, **json.loads(self.get_object_repr()))
         self.check_result(human)
-        self.check_result(human_2)
 
 
 class WithAny:  # pylint: disable=too-few-public-methods

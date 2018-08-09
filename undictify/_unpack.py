@@ -21,6 +21,9 @@ TypeT = TypeVar('TypeT')
 def type_checked_call(func: Callable[..., TypeT]) -> Callable[..., TypeT]:
     """Decorator that type checks arguments to every call of a function."""
 
+    if _is_wrapped_func(func):
+        raise TypeError('Function already is wrapped by undictify.')
+
     def wrapper(*args: Any, **kwargs: Any) -> TypeT:
         return _unpack_dict(func,  # type: ignore
                             _merge_args_and_kwargs(func, *args, **kwargs),
