@@ -38,9 +38,10 @@ The output will become `output: 3 * 2 = 33`, which *might* not be desired.
 
 So you add something like
 ```python
-assert isinstance(value, int)
+if not isinstance(value, int):
+    raise TypeError(...)
 ```
-to `times_two`. This will raise an `AssertionError` instead, which is better.
+to `times_two`. This will raise an `TypeError` instead, which is better.
 But you still only recognize the mistake when actually running the code.
 Catching it earlier in the development process might be better.
 Luckily Python allows to opt-in for static typing by offering [type annotations](https://docs.python.org/3/library/typing.html).
@@ -76,10 +77,10 @@ print(f'{value} * 2 == {result}')
 
 At least with the [appropriate settings(https://stackoverflow.com/questions/51696060/how-to-make-mypy-complain-about-assigning-an-any-to-an-int-part-2/51696314#51696314), `mypy` should dutifully complain], and now you're left with two options:
 - Drop type-checking (for example by adding ` # type: ignore` to the end of the `result = times_two(value)` line): This however catapults you back into the insane world where `2 * 3 == 33`.
-- You manually add type checks before the call (or inside of `times_two`) like `assert isinstance(value, int)`: This of course does not provide static type checking (because of the dynamic nature of `value`), but at least guarantees sane runtime behavior. 
+- You manually add type checks before the call (or inside of `times_two`) like `if not isinstance(value, int):`: This of course does not provide static type checking (because of the dynamic nature of `value`), but at least guarantees sane runtime behavior. 
 
 But the process of writing that boilerplate validation code can become quite cumbersome if you have multiple parameters/functions to check.
-Also it is not very [DRY](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself) since you already have the needed type information in our function signature and you just duplicated it in the assertion statement.
+Also it is not very [DRY](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself) since you already have the needed type information in our function signature and you just duplicated it in the check condition.
 
 This is where undictify comes into play. Simply decorate your `times_two` function with `@type_checked_call`:
 ```python
