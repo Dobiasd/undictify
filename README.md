@@ -162,6 +162,8 @@ class Human(NamedTuple):
     friend_ids: List[int]
 ```
 
+(They do not need to be derived from `NamedTuple`. A normal class with a custom `__init__` function or a `@dataclass` works too.)
+
 Having the safety provided by the static type annotations (and probably checking your code with `mypy`) is a great because of all the:
 - bugs that don't make it into PROD
 - manual type checks (and matching unit tests) that you don't have to write
