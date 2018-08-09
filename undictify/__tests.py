@@ -815,9 +815,8 @@ class TestUnpackingWithMemberFunc(unittest.TestCase):
         """Valid data dict."""
         data = {'val_1': 40, 'val_2': 2}
         with_member_func = WithMemberFuncDecorated(**data)
-        with self.assertRaises(TypeError):
-            result = with_member_func.member_func('hello')
-            self.assertEqual(result, '42hello')
+        result = with_member_func.member_func('hello')
+        self.assertEqual(result, '42hello')
 
 
 class WithUnion:  # pylint: disable=too-few-public-methods
