@@ -428,6 +428,17 @@ class TestUnpackingFoo(unittest.TestCase):  # pylint: disable=too-many-public-me
         ])
 
 
+class TestErrorMessageOnIncorrectUsage(unittest.TestCase):
+    """Avoid confusion"""
+
+    def test_no_unpacking(self) -> None:
+        """Should give meaningful error."""
+        data = {
+            "val": 42, "msg": "hello", "frac": 3.14, "flag": True, "opt": 10}
+        with self.assertRaises(TypeError):
+            foo_function_type_checked_call(data)  # pylint: disable=no-value-for-parameter
+
+
 class TestUseOnDecorated(unittest.TestCase):
     """Tests call of type_checked_call on already decorated function."""
 
@@ -445,6 +456,14 @@ class Point:  # pylint: disable=too-few-public-methods
     def __init__(self, x_val: int, y_val: int) -> None:
         self.x_val: int = x_val
         self.y_val: int = y_val
+
+
+class Speed:  # pylint: disable=too-few-public-methods
+    """Dummy point class."""
+
+    def __init__(self, x_vel: int, y_vel: int) -> None:
+        self.x_vel: int = x_vel
+        self.y_vel: int = y_vel
 
 
 class Nested:  # pylint: disable=too-few-public-methods
@@ -579,6 +598,12 @@ class TestUnpackingNested(unittest.TestCase):
         object_dict = {"pos": Point(1, 2), "opt_pos2": Point(3, 4)}
         nested: Nested = type_checked_call()(Nested)(**object_dict)
         self.check_result(nested)
+
+    def test_ok_nested_already_objects_wrong_type(self) -> None:  # pylint: disable=invalid-name
+        """Valid JSON string."""
+        object_dict = {"pos": Point(1, 2), "opt_pos2": Speed(3, 4)}
+        with self.assertRaises(TypeError):
+            type_checked_call()(Nested)(**object_dict)
 
     def test_ok_nested_decorated_objects(self) -> None:  # pylint: disable=invalid-name
         """Valid JSON string."""
