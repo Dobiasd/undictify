@@ -168,6 +168,7 @@ Having the safety provided by the static type annotations (and probably checking
 - bugs that don't make it into PROD
 - manual type checks (and matching unit tests) that you don't have to write
 - help your IDE can now offer
+- better understanding people get when reading your code
 - easier and more confident refactorings
 
 But again, writing all that boilerplate code for data validation is tedious (and not DRY).
