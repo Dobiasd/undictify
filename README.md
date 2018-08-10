@@ -82,11 +82,11 @@ At least with the [appropriate settings(https://stackoverflow.com/questions/5169
 But the process of writing that boilerplate validation code can become quite cumbersome if you have multiple parameters/functions to check.
 Also it is not very [DRY](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself) since you already have the needed type information in our function signature and you just duplicated it in the check condition.
 
-This is where undictify comes into play. Simply decorate your `times_two` function with `@type_checked_call`:
+This is where undictify comes into play. Simply decorate your `times_two` function with `@type_checked_call()`:
 ```python
 from undictify import type_checked_call
 
-@type_checked_call
+@type_checked_call()
 def times_two(value: int) -> int:
     return 2 * value
 ```
@@ -179,10 +179,10 @@ Undictify can help here too!
 Initialization of a `NamedTuple` is just a call to its constructor.
 So you simply need to annotate the classes with `type_cheked_call` and you are done:
 ```python
-@type_checked_call
+@type_checked_call()
 class Heart(NamedTuple):
     ...
-@type_checked_call
+@type_checked_call()
 class Human(NamedTuple):
     ...
 ```
@@ -210,12 +210,12 @@ Details
 
 Sometimes, e.g., in case of unpacking a dictionary resulting from a JSON string,
 you might want to just skip the fields in the dictionary that your function / constructor does not take as a parameter.
-For these cases undictify provides `@type_checked_call_skip`.
+For these cases undictify provides `@type_checked_call(skip=True)`.
 
-It also supports valid type conversions via `@type_checked_call_convert`,
+It also supports valid type conversions via `@type_checked_call(convert=True)`,
 which might for example come in handy when processing the arguments of an HTTP request you receive for example in a `get` handler of a `flask_restful.Resource` class:
 ```python
-@type_checked_call_convert
+@type_checked_call(convert=True)
 def target_function(some_int: int, some_str: str)
 
 class WebController(Resource):
@@ -224,47 +224,21 @@ class WebController(Resource):
         result = target_function(**flask.request.args)
 ```
 
-The values in the `MultiDict` `request.args` are all strings, but the logic behind `@type_checked_call_convert` tries to convert them into the desired target types with reasonable exceptions in case the conversion is not possible.
+The values in the `MultiDict` `request.args` are all strings, but the logic behind `@type_checked_call(convert=True)` tries to convert them into the desired target types with reasonable exceptions in case the conversion is not possible.
 
 This way a request to `http://.../foo?some_int=4&some_str=hi` would be handled normally,
 but `http://.../foo?some_int=four&some_str=hi` would raise an appropriate `TypeError`.
 
-Additional flexibility is offered for cases in which you would like to not type-check all calls of a specific function / class constructor, but only some. You can use `type_checked_apply` instead of adding the annotation for those:
+Additional flexibility is offered for cases in which you would like to not type-check all calls of a specific function / class constructor, but only some. You can use `type_checked_call()` at call site instead of adding the annotation for those:
 
 ```python
-from undictify import type_checked_apply
+from undictify import type_checked_call
 
 def times_two(value: int) -> int:
     return 2 * value
 
 value: Any = '3'
-resutl = type_checked_apply(times_two, value)
-```
-
-So in general you can decide between checking every call (by adding a `@type_checked_call_*` annotation)
-and checking single calls (by wrapping them with `type_checked_apply_*`).
-
-For both versions you can choose if superfluous keyword arguments should lead to an error or should be skipped silently: 
-
-|       settings |                    all calls |                       single call |
-| --------------:| ----------------------------:| ---------------------------------:|
-|                | `@type_checked_call`         | `type_checked_apply`              |
-|           skip | `@type_checked_call_skip`    | `type_checked_apply_skip`         |
-|        convert | `@type_checked_call_convert` | `type_checked_apply_convert`      |
-| skip + convert | `@type_checked_call_skip`    | `type_checked_apply_skip_convert` |
-
-In case you use an annotation *and* a wrapped call,
-the settings of the wrapped call overwrite the settings of the annotation temporarily:
-
-```python
-@type_checked_call_skip
-def foo(bar: int, baz: str) -> None:
-    pass
-
-data = {...}
-foo(data) # skip: yes; convert: no
-type_checked_apply_convert(foo, data) # skip: no; convert: yes
-foo(data) # skip: yes; convert: no
+resutl = type_checked_call()(times_two)(value)
 ```
 
 

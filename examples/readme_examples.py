@@ -5,10 +5,9 @@ undictify - examples from README.md
 """
 
 import json
-from typing import List, NamedTuple, Optional, Any, TypeVar, Callable
+from typing import List, NamedTuple, Optional, Any
 
-from undictify import type_checked_apply_skip, type_checked_apply_skip_convert
-from undictify import type_checked_call_skip
+from undictify import type_checked_call
 
 __author__ = "Tobias Hermann"
 __copyright__ = "Copyright 2018, Tobias Hermann"
@@ -46,13 +45,13 @@ def intro_3():
     print(f'{value} * 2 == {result}')
 
 
-@type_checked_call_skip
+@type_checked_call(skip=True)
 class Heart(NamedTuple):
     weight_in_kg: float
     pulse_at_rest: int
 
 
-@type_checked_call_skip
+@type_checked_call(skip=True)
 class Human(NamedTuple):
     id: int
     name: str
@@ -76,40 +75,11 @@ def json_1():
     assert len(tobias.friend_ids) == 4
 
 
-TypeT = TypeVar('TypeT')
-
-
-def unpack_json(target_func: Callable[..., TypeT],
-                object_repr: str, convert_types: bool = False) -> TypeT:
-    if convert_types:
-        return type_checked_apply_skip_convert(target_func,
-                                               **json.loads(object_repr))
-    return type_checked_apply_skip(target_func,
-                                   **json.loads(object_repr))
-
-
-def json_2():
-    tobias_json = '''
-        {
-            "id": 1,
-            "name": "Tobias",
-            "heart": {
-                "weight_in_kg": 0.31,
-                "pulse_at_rest": 52
-            },
-            "friend_ids": [2, 3, 4, 5],
-            "ignore": 42
-        }'''
-    tobias = unpack_json(Human, tobias_json)
-    assert len(tobias.friend_ids) == 4
-
-
 def main():
     intro_1()
     intro_2()
     intro_3()
     json_1()
-    json_2()
 
 
 if __name__ == "__main__":

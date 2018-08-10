@@ -18,59 +18,24 @@ else:
 TypeT = TypeVar('TypeT')
 
 
-def type_checked_call(func: Callable[..., TypeT]) -> Callable[..., TypeT]:
+def type_checked_call(skip: bool = False,
+                      convert: bool = False) -> Callable[[Callable[..., TypeT]],
+                                                         Callable[..., TypeT]]:
     """Decorator that type checks arguments to every call of a function."""
 
-    if _is_wrapped_func(func):
-        raise TypeError('Function already is wrapped by undictify.')
+    def call_decorator(func: Callable[..., TypeT]) -> Callable[..., TypeT]:
+        if _is_wrapped_func(func):
+            raise TypeError('Function is already wrapped by undictify.')
 
-    def wrapper(*args: Any, **kwargs: Any) -> TypeT:
-        return _unpack_dict(func,  # type: ignore
-                            _merge_args_and_kwargs(func, *args, **kwargs),
-                            False, False)
+        def wrapper(*args: Any, **kwargs: Any) -> TypeT:
+            return _unpack_dict(func,  # type: ignore
+                                _merge_args_and_kwargs(func, *args, **kwargs),
+                                skip, convert)
 
-    setattr(wrapper, '_undictify_wrapped_func', func)
-    return wrapper
+        setattr(wrapper, '_undictify_wrapped_func', func)
+        return wrapper
 
-
-def type_checked_call_skip(func: Callable[..., TypeT]) -> Callable[..., TypeT]:
-    """Decorator that type checks arguments to every call of a function.
-    It skips all keyword arguments that the function does not take."""
-
-    def wrapper(*args: Any, **kwargs: Any) -> TypeT:
-        return _unpack_dict(func,  # type: ignore
-                            _merge_args_and_kwargs(func, *args, **kwargs),
-                            True, False)
-
-    setattr(wrapper, '_undictify_wrapped_func', func)
-    return wrapper
-
-
-def type_checked_call_convert(func: Callable[..., TypeT]) -> Callable[..., TypeT]:
-    """Decorator that type checks arguments to every call of a function.
-    It converts arguments into target types of parameters if possible."""
-
-    def wrapper(*args: Any, **kwargs: Any) -> TypeT:
-        return _unpack_dict(func,  # type: ignore
-                            _merge_args_and_kwargs(func, *args, **kwargs),
-                            False, True)
-
-    setattr(wrapper, '_undictify_wrapped_func', func)
-    return wrapper
-
-
-def type_checked_call_skip_convert(func: Callable[..., TypeT]) -> Callable[..., TypeT]:
-    """Decorator that type checks arguments to every call of a function.
-    It skips all keyword arguments that the function does not take and
-    converts arguments into target types of parameters if possible."""
-
-    def wrapper(*args: Any, **kwargs: Any) -> TypeT:
-        return _unpack_dict(func,  # type: ignore
-                            _merge_args_and_kwargs(func, *args, **kwargs),
-                            True, True)
-
-    setattr(wrapper, '_undictify_wrapped_func', func)
-    return wrapper
+    return call_decorator
 
 
 WrappedOrFunc = Callable[..., TypeT]
@@ -78,34 +43,6 @@ WrappedOrFunc = Callable[..., TypeT]
 
 def _is_wrapped_func(func: WrappedOrFunc) -> bool:
     return hasattr(func, '_undictify_wrapped_func')
-
-
-def type_checked_apply(func: WrappedOrFunc,
-                       *args: Any, **kwargs: Any) -> Any:
-    """Type check the arguments of a function call."""
-    return type_checked_call(func)(*args, **kwargs)
-
-
-def type_checked_apply_skip(func: WrappedOrFunc,
-                            *args: Any, **kwargs: Any) -> Any:
-    """Type check the arguments of a function call.
-    Skips all keyword arguments that the function does not take."""
-    return type_checked_call_skip(func)(*args, **kwargs)
-
-
-def type_checked_apply_convert(func: WrappedOrFunc,
-                               *args: Any, **kwargs: Any) -> Any:
-    """Type check the arguments of a function call.
-    Convert arguments into target types of parameters if possible."""
-    return type_checked_call_convert(func)(*args, **kwargs)
-
-
-def type_checked_apply_skip_convert(func: WrappedOrFunc,
-                                    *args: Any, **kwargs: Any) -> Any:
-    """Type check the arguments of a function call.
-    Skips all keyword arguments that the function does not take and
-    convert arguments into target types of parameters if possible."""
-    return type_checked_call_skip_convert(func)(*args, **kwargs)
 
 
 def _merge_args_and_kwargs(func: Callable[..., TypeT],

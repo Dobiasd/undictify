@@ -7,10 +7,7 @@ import unittest
 from typing import Any, Callable, Dict, List, NamedTuple, Optional, Union, Tuple
 from typing import TypeVar
 
-from ._unpack import type_checked_apply, type_checked_apply_convert
-from ._unpack import type_checked_apply_skip, type_checked_apply_skip_convert
-from ._unpack import type_checked_call, type_checked_call_convert
-from ._unpack import type_checked_call_skip, type_checked_call_skip_convert
+from ._unpack import type_checked_call
 
 TypeT = TypeVar('TypeT')
 
@@ -36,27 +33,25 @@ class TestArgsCalls(unittest.TestCase):  # pylint: disable=too-many-public-metho
 
     def test_foo_function_positional(self) -> None:
         """Positional arguments only."""
-        result: WithTwoMembers = type_checked_apply(create_with_two_members,
-                                                    42, 'hello')
+        result: WithTwoMembers = type_checked_call()(create_with_two_members)(42, 'hello')
         self.check_result(result)
 
     def test_foo_function_keyword(self) -> None:
         """Keyword arguments only."""
-        result: WithTwoMembers = type_checked_apply(create_with_two_members,
-                                                    val=42, msg='hello')
+        result: WithTwoMembers = type_checked_call()(create_with_two_members)(val=42, msg='hello')
         self.check_result(result)
 
     def test_foo_function_positional_and_keyword(self) -> None:  # pylint: disable=invalid-name
         """Positional and keyword arguments."""
-        result: WithTwoMembers = type_checked_apply(create_with_two_members,
-                                                    42, **{'msg': 'hello'})
+        result: WithTwoMembers = type_checked_call()(create_with_two_members)(
+            42, **{'msg': 'hello'})
         self.check_result(result)
 
     def test_foo_function_positional_and_keyword_duplicates(self) -> None:  # pylint: disable=invalid-name
         """Invalid (overlapping) combination of
         positional arguments and keyword arguments."""
         with self.assertRaises(TypeError):
-            type_checked_apply(create_with_two_members, 42, 'hello', val=42)
+            type_checked_call()(create_with_two_members)(42, 'hello', val=42)
 
 
 class Foo:  # pylint: disable=too-few-public-methods
@@ -72,7 +67,7 @@ class Foo:  # pylint: disable=too-few-public-methods
         self.opt: Optional[int] = opt
 
 
-@type_checked_call
+@type_checked_call()
 class FooDecorated:  # pylint: disable=too-few-public-methods
     """Some dummy class."""
 
@@ -95,7 +90,7 @@ class FooNamedTuple(NamedTuple):  # pylint: disable=too-few-public-methods
     opt: Optional[int]
 
 
-@type_checked_call  # pylint: disable=too-few-public-methods
+@type_checked_call()  # pylint: disable=too-few-public-methods
 class FooNamedTupleDecorated(NamedTuple):
     """Some dummy class as a NamedTuple."""
     val: int
@@ -111,28 +106,28 @@ def foo_function(val: int, msg: str, frac: float, flag: bool,
     return Foo(val, msg, flag, opt, frac)
 
 
-@type_checked_call
+@type_checked_call()
 def foo_function_type_checked_call(val: int, msg: str, frac: float, flag: bool,  # pylint: disable=invalid-name
                                    opt: Optional[int]) -> Foo:
     """Some dummy function. Forwarding to class for value storage."""
     return Foo(val, msg, flag, opt, frac)
 
 
-@type_checked_call_convert
+@type_checked_call(convert=True)
 def foo_function_type_checked_call_convert(val: int, msg: str, frac: float,  # pylint: disable=invalid-name
                                            flag: bool, opt: Optional[int]) -> Foo:
     """Some dummy function. Forwarding to class for value storage."""
     return Foo(val, msg, flag, opt, frac)
 
 
-@type_checked_call_skip
+@type_checked_call(skip=True)
 def foo_function_type_checked_call_skip(val: int, msg: str, frac: float,  # pylint: disable=invalid-name
                                         flag: bool, opt: Optional[int]) -> Foo:
     """Some dummy function. Forwarding to class for value storage."""
     return Foo(val, msg, flag, opt, frac)
 
 
-@type_checked_call_skip_convert
+@type_checked_call(skip=True, convert=True)
 def foo_function_type_checked_call_skip_convert(val: int, msg: str, frac: float,  # pylint: disable=invalid-name
                                                 flag: bool, opt: Optional[int]) -> Foo:
     """Some dummy function. Forwarding to class for value storage."""
@@ -158,7 +153,7 @@ class TestUnpackingFoo(unittest.TestCase):  # pylint: disable=too-many-public-me
         data = {
             "val": 42, "msg": "hello", "frac": 3.14, "flag": True, "opt": 10}
         if not decorated:
-            a_foo = type_checked_apply(func, **data)
+            a_foo = type_checked_call()(func)(**data)
         else:
             a_foo = func(**data)
         self.check_result(a_foo, 10)
@@ -169,7 +164,7 @@ class TestUnpackingFoo(unittest.TestCase):  # pylint: disable=too-many-public-me
         object_repr = '{"val": 42, "msg": "hello", "frac": 3.14, ' \
                       '"flag": true, "opt": 10}'
         if not decorated:
-            a_foo = type_checked_apply(func, **json.loads(object_repr))
+            a_foo = type_checked_call()(func)(**json.loads(object_repr))
         else:
             a_foo = func(**json.loads(object_repr))
         self.check_result(a_foo, 10)
@@ -180,7 +175,7 @@ class TestUnpackingFoo(unittest.TestCase):  # pylint: disable=too-many-public-me
         object_repr = '{"val": 42, "msg": "hello", "frac": 3.14, ' \
                       '"flag": true, "opt": null}'
         if not decorated:
-            a_foo = type_checked_apply(func, **json.loads(object_repr))
+            a_foo = type_checked_call()(func)(**json.loads(object_repr))
         else:
             a_foo = func(**json.loads(object_repr))
         self.check_result(a_foo, None)
@@ -191,7 +186,7 @@ class TestUnpackingFoo(unittest.TestCase):  # pylint: disable=too-many-public-me
         object_repr = '{"val": 42, "msg": "hello", "frac": 3.14, ''' \
                       '"flag": true, "opt": 10, "ignore": 1}'
         if not decorated:
-            a_foo = type_checked_apply_skip(func, **json.loads(object_repr))
+            a_foo = type_checked_call(skip=True)(func)(**json.loads(object_repr))
         else:
             a_foo = func(**json.loads(object_repr))
         self.check_result(a_foo, 10)
@@ -202,7 +197,7 @@ class TestUnpackingFoo(unittest.TestCase):  # pylint: disable=too-many-public-me
         object_repr = '{"val": "42", "msg": 5, "frac": 3, ' \
                       '"flag": true, "opt": 10.1}'
         if not decorated:
-            a_foo = type_checked_apply_convert(func, **json.loads(object_repr))
+            a_foo = type_checked_call(convert=True)(func)(**json.loads(object_repr))
         else:
             a_foo = func(**json.loads(object_repr))
         self.check_result(a_foo, 10, 3.0, '5')
@@ -213,7 +208,7 @@ class TestUnpackingFoo(unittest.TestCase):  # pylint: disable=too-many-public-me
         object_repr = '{"val": "42", "msg": "hello", "frac": 3.14, ''' \
                       '"flag": true, "opt": 10, "ignore": 1}'
         if not decorated:
-            a_foo = type_checked_apply_skip_convert(func, **json.loads(object_repr))
+            a_foo = type_checked_call(skip=True, convert=True)(func)(**json.loads(object_repr))
         else:
             a_foo = func(**json.loads(object_repr))
         self.check_result(a_foo, 10)
@@ -225,7 +220,7 @@ class TestUnpackingFoo(unittest.TestCase):  # pylint: disable=too-many-public-me
         object_repr = '{"val": 42, "msg": "hello", "frac": 3.14, ' \
                       '"flag": true, "opt": "wrong"}'
         if not decorated:
-            type_checked_apply(func, **json.loads(object_repr))
+            type_checked_call()(func)(**json.loads(object_repr))
         else:
             func(**json.loads(object_repr))
 
@@ -236,7 +231,7 @@ class TestUnpackingFoo(unittest.TestCase):  # pylint: disable=too-many-public-me
         object_repr = '{"val": "twentyfour", "msg": "hello", "frac": 3.14, ' \
                       '"flag": true, "opt": 10}'
         if not decorated:
-            type_checked_apply_convert(func, **json.loads(object_repr))
+            type_checked_call(convert=True)(func)(**json.loads(object_repr))
         else:
             func(**json.loads(object_repr))
 
@@ -246,7 +241,7 @@ class TestUnpackingFoo(unittest.TestCase):  # pylint: disable=too-many-public-me
         """Invalid JSON string: missing a field."""
         object_repr = '{"val": 42, "msg": "hello", "opt": 10, "flag": true}'
         if not decorated:
-            type_checked_apply(func, **json.loads(object_repr))
+            type_checked_call()(func)(**json.loads(object_repr))
         else:
             func(**json.loads(object_repr))
 
@@ -255,7 +250,7 @@ class TestUnpackingFoo(unittest.TestCase):  # pylint: disable=too-many-public-me
         """Valid JSON string without providing value for optional member."""
         object_repr = '{"val": 42, "msg": "hello", "frac": 3.14, "flag": true}'
         if not decorated:
-            a_foo = type_checked_apply(func, **json.loads(object_repr))
+            a_foo = type_checked_call()(func)(**json.loads(object_repr))
         else:
             a_foo = func(**json.loads(object_repr))
         self.check_result(a_foo, None)
@@ -267,7 +262,7 @@ class TestUnpackingFoo(unittest.TestCase):  # pylint: disable=too-many-public-me
         object_repr = '{"val": 42, "msg": "hello", "opt": 10, ' \
                       '"frac": "incorrect", "flag": true}'
         if not decorated:
-            type_checked_apply(func, **json.loads(object_repr))
+            type_checked_call()(func)(**json.loads(object_repr))
         else:
             func(**json.loads(object_repr))
 
@@ -433,15 +428,15 @@ class TestUnpackingFoo(unittest.TestCase):  # pylint: disable=too-many-public-me
         ])
 
 
-class TestApplyOnDecorated(unittest.TestCase):
-    """Tests call of type_checked_apply on already decorated function."""
+class TestUseOnDecorated(unittest.TestCase):
+    """Tests call of type_checked_call on already decorated function."""
 
     def test_double_wrapping(self) -> None:
         """Should error to avoid confusion."""
         data = {
             "val": 42, "msg": "hello", "frac": 3.14, "flag": True, "opt": 10}
         with self.assertRaises(TypeError):
-            type_checked_apply(foo_function_type_checked_call, **data)
+            type_checked_call()(foo_function_type_checked_call)(**data)
 
 
 class Point:  # pylint: disable=too-few-public-methods
@@ -460,7 +455,7 @@ class Nested:  # pylint: disable=too-few-public-methods
         self.opt_pos2: Optional[Point] = opt_pos2
 
 
-@type_checked_call
+@type_checked_call()
 class PointDecorated:  # pylint: disable=too-few-public-methods
     """Dummy point class."""
 
@@ -469,7 +464,7 @@ class PointDecorated:  # pylint: disable=too-few-public-methods
         self.y_val: int = y_val
 
 
-@type_checked_call_skip
+@type_checked_call(skip=True)
 class PointDecoratedSkip:  # pylint: disable=too-few-public-methods
     """Dummy point class."""
 
@@ -478,7 +473,7 @@ class PointDecoratedSkip:  # pylint: disable=too-few-public-methods
         self.y_val: int = y_val
 
 
-@type_checked_call
+@type_checked_call()
 class NestedDecorated:  # pylint: disable=too-few-public-methods
     """Dummy class with a non-primitive member."""
 
@@ -490,7 +485,7 @@ class NestedDecorated:  # pylint: disable=too-few-public-methods
         self.pos_list: List[PointDecorated] = pos_list
 
 
-@type_checked_call_convert
+@type_checked_call(convert=True)
 class NestedDecoratedConvertPointSkip:  # pylint: disable=too-few-public-methods
     """Dummy class with a non-primitive member."""
 
@@ -499,7 +494,7 @@ class NestedDecoratedConvertPointSkip:  # pylint: disable=too-few-public-methods
         self.val: int = val
 
 
-@type_checked_call  # pylint: disable=too-few-public-methods
+@type_checked_call()  # pylint: disable=too-few-public-methods
 class PointDecoratedNamedTuple(NamedTuple):
     """Dummy point class."""
 
@@ -507,7 +502,7 @@ class PointDecoratedNamedTuple(NamedTuple):
     y_val: int
 
 
-@type_checked_call  # pylint: disable=too-few-public-methods
+@type_checked_call()  # pylint: disable=too-few-public-methods
 class NestedDecoratedNamedTuple(NamedTuple):
     """Dummy class with a non-primitive member."""
 
@@ -530,7 +525,7 @@ class TestUnpackingNested(unittest.TestCase):
     def test_ok(self) -> None:
         """Valid JSON string."""
         object_repr = '{"pos": {"x_val": 1, "y_val": 2}, "opt_pos2": {"x_val": 3, "y_val": 4}}'
-        nested: Nested = type_checked_apply(Nested, **json.loads(object_repr))
+        nested: Nested = type_checked_call()(Nested)(**json.loads(object_repr))
         self.check_result(nested)
 
     def test_superfluous_error_nested(self) -> None:
@@ -538,14 +533,14 @@ class TestUnpackingNested(unittest.TestCase):
         object_repr = '''{"pos": {"x_val": 1, "y_val": 2, "too_much": 42},
                          "opt_pos2": {"x_val": 3, "y_val": 4}}'''
         with self.assertRaises(TypeError):
-            type_checked_apply(Nested, **json.loads(object_repr))
+            type_checked_call()(Nested)(**json.loads(object_repr))
 
     def test_superfluous_error_opt_nested(self) -> None:  # pylint: disable=invalid-name
         """Should use plain ctor of nested and thus error."""
         object_repr = '''{"pos": {"x_val": 1, "y_val": 2},
                          "opt_pos2": {"x_val": 3, "y_val": 4, "too_much": 42}}'''
         with self.assertRaises(TypeError):
-            type_checked_apply(Nested, **json.loads(object_repr))
+            type_checked_call()(Nested)(**json.loads(object_repr))
 
     def test_ok_decorated(self) -> None:
         """Valid JSON string."""
@@ -582,7 +577,7 @@ class TestUnpackingNested(unittest.TestCase):
     def test_ok_nested_already_objects(self) -> None:
         """Valid JSON string."""
         object_dict = {"pos": Point(1, 2), "opt_pos2": Point(3, 4)}
-        nested: Nested = type_checked_apply(Nested, **object_dict)
+        nested: Nested = type_checked_call()(Nested)(**object_dict)
         self.check_result(nested)
 
     def test_ok_nested_decorated_objects(self) -> None:  # pylint: disable=invalid-name
@@ -596,19 +591,19 @@ class TestUnpackingNested(unittest.TestCase):
     def test_ok_nested_objects_opt_none(self) -> None:
         """Valid JSON string."""
         object_dict = {"pos": Point(1, 2), "opt_pos2": None}
-        nested: Nested = type_checked_apply(Nested, **object_dict)
+        nested: Nested = type_checked_call()(Nested)(**object_dict)
         self.check_result(nested)
 
     def test_ok_opt_null(self) -> None:
         """Valid JSON string with optional explicitly being None."""
         object_repr = '{"pos": {"x_val": 1, "y_val": 2}, "opt_pos2": null}'
-        nested: Nested = type_checked_apply(Nested, **json.loads(object_repr))
+        nested: Nested = type_checked_call()(Nested)(**json.loads(object_repr))
         self.check_result(nested)
 
     def test_ok_opt_missing(self) -> None:
         """Valid JSON string without optional field."""
         object_repr = '{"pos": {"x_val": 1, "y_val": 2}}'
-        nested: Nested = type_checked_apply(Nested, **json.loads(object_repr))
+        nested: Nested = type_checked_call()(Nested)(**json.loads(object_repr))
         self.check_result(nested)
 
     def test_from_dict_decorated(self) -> None:
@@ -637,14 +632,14 @@ class TestUnpackingNested(unittest.TestCase):
             NestedDecoratedConvertPointSkip(**data)
 
 
-@type_checked_call  # pylint: disable=too-few-public-methods
+@type_checked_call()  # pylint: disable=too-few-public-methods
 class Heart(NamedTuple):
     """Nested class"""
     weight_in_kg: float
     pulse_at_rest: int
 
 
-@type_checked_call  # pylint: disable=too-few-public-methods
+@type_checked_call()  # pylint: disable=too-few-public-methods
 class Human(NamedTuple):
     """Class having a nested member"""
     id: int
@@ -681,11 +676,6 @@ class TestUnpackingHuman(unittest.TestCase):
         human: Human = Human(**json.loads(self.get_object_repr()))
         self.check_result(human)
 
-    def test_ok_type_checked_apply_on_decorated(self) -> None:  # pylint: disable=invalid-name
-        """Valid JSON string."""
-        human: Human = Human(**json.loads(self.get_object_repr()))
-        self.check_result(human)
-
 
 class WithAny:  # pylint: disable=too-few-public-methods
     """Dummy class with an Amy member."""
@@ -700,13 +690,13 @@ class TestUnpackingWithAny(unittest.TestCase):
     def test_ok_str(self) -> None:
         """Valid JSON string."""
         object_repr = '{"val": "foo"}'
-        with_any: WithAny = type_checked_apply(WithAny, **json.loads(object_repr))
+        with_any: WithAny = type_checked_call()(WithAny)(**json.loads(object_repr))
         self.assertEqual(with_any.val, "foo")
 
     def test_ok_float(self) -> None:
         """Valid JSON string."""
         object_repr = '{"val": 3.14}'
-        with_any: WithAny = type_checked_apply(WithAny, **json.loads(object_repr))
+        with_any: WithAny = type_checked_call()(WithAny)(**json.loads(object_repr))
         self.assertEqual(with_any.val, 3.14)
 
 
@@ -734,7 +724,7 @@ class TestUnpackingWithList(unittest.TestCase):
                       '"opt_strs": ["a", "b"], ' \
                       '"opt_str_list": ["a", "b"], ' \
                       '"points": [{"x_val": 1, "y_val": 2}]}'
-        with_list: WithLists = type_checked_apply(WithLists, **json.loads(object_repr))
+        with_list: WithLists = type_checked_call()(WithLists)(**json.loads(object_repr))
         self.assertEqual(with_list.ints, [1, 2])
         self.assertEqual(with_list.opt_strs, ["a", "b"])
         self.assertEqual(with_list.opt_str_list, ["a", "b"])
@@ -747,7 +737,7 @@ class TestUnpackingWithList(unittest.TestCase):
                       '"opt_strs": [null], ' \
                       '"opt_str_list": null, ' \
                       '"points": [{"x_val": 1, "y_val": 2}]}'
-        with_list: WithLists = type_checked_apply(WithLists, **json.loads(object_repr))
+        with_list: WithLists = type_checked_call()(WithLists)(**json.loads(object_repr))
         self.assertEqual(with_list.ints, [1, 2])
         self.assertEqual(with_list.opt_strs, [None])
         self.assertEqual(with_list.opt_str_list, None)
@@ -760,7 +750,7 @@ class TestUnpackingWithList(unittest.TestCase):
                       '"opt_strs": [], ' \
                       '"opt_str_list": [], ' \
                       '"points": []}'
-        with_list: WithLists = type_checked_apply(WithLists, **json.loads(object_repr))
+        with_list: WithLists = type_checked_call()(WithLists)(**json.loads(object_repr))
         self.assertEqual(with_list.ints, [])
         self.assertEqual(with_list.opt_strs, [])
         self.assertEqual(with_list.opt_str_list, [])
@@ -774,7 +764,7 @@ class TestUnpackingWithList(unittest.TestCase):
                       '"opt_str_list": ["a", "b"], ' \
                       '"points": [{"x_val": 1, "y_val": 2}]}'
         with self.assertRaises(TypeError):
-            type_checked_apply(WithLists, **json.loads(object_repr))
+            type_checked_call()(WithLists)(**json.loads(object_repr))
 
 
 class WithMemberFunc:  # pylint: disable=too-few-public-methods
@@ -789,7 +779,7 @@ class WithMemberFunc:  # pylint: disable=too-few-public-methods
         return str(self.val_1 + self.val_2) + msg
 
 
-@type_checked_call
+@type_checked_call()
 class WithMemberFuncDecorated:  # pylint: disable=too-few-public-methods,unused-variable
     """Dummy class with a Union member."""
 
@@ -797,7 +787,7 @@ class WithMemberFuncDecorated:  # pylint: disable=too-few-public-methods,unused-
         self.val_1: int = val_1
         self.val_2: int = val_2
 
-    @type_checked_call
+    @type_checked_call()
     def member_func(self, msg: str) -> str:
         """Return value sum as string with message concatenated."""
         return str(self.val_1 + self.val_2) + msg
@@ -809,16 +799,16 @@ class TestUnpackingWithMemberFunc(unittest.TestCase):
     def test_ok(self) -> None:
         """Valid data dict."""
         data = {'val_1': 40, 'val_2': 2}
-        with_member_func = type_checked_apply(WithMemberFunc, **data)
-        result = type_checked_apply(with_member_func.member_func, 'hello')
+        with_member_func = type_checked_call()(WithMemberFunc)(**data)
+        result = type_checked_call()(with_member_func.member_func)('hello')
         self.assertEqual(result, '42hello')
 
     def test_invalid_type(self) -> None:
         """Incorrect type."""
         data = {'val_1': 40, 'val_2': 2}
-        with_member_func = type_checked_apply(WithMemberFunc, **data)
+        with_member_func = type_checked_call()(WithMemberFunc)(**data)
         with self.assertRaises(TypeError):
-            type_checked_apply(with_member_func.member_func, 3)
+            type_checked_call()(with_member_func.member_func)(3)
 
     def test_ok_decorated(self) -> None:
         """Valid data dict."""
@@ -842,7 +832,7 @@ class TestUnpackingWithUnion(unittest.TestCase):
         """Valid JSON string, but invalid target class."""
         object_repr = '{"val": "hi"}'
         with self.assertRaises(TypeError):
-            type_checked_apply(WithUnion, **json.loads(object_repr))
+            type_checked_call()(WithUnion)(**json.loads(object_repr))
 
 
 class WithoutTypeAnnotation:  # pylint: disable=too-few-public-methods
@@ -859,7 +849,7 @@ class TestUnpackingWithoutTypeAnnotation(unittest.TestCase):
         """Valid JSON string, but invalid target class."""
         object_repr = '{"val": "hi"}'
         with self.assertRaises(TypeError):
-            type_checked_apply(WithoutTypeAnnotation, **json.loads(object_repr))
+            type_checked_call()(WithoutTypeAnnotation)(**json.loads(object_repr))
 
 
 class WithDict:  # pylint: disable=too-few-public-methods
@@ -876,7 +866,7 @@ class TestUnpackingWithDict(unittest.TestCase):
         """Valid JSON string, but invalid target class."""
         object_repr = '{"val": {"key1": 1, "key2": 2}}'
         with self.assertRaises(TypeError):
-            type_checked_apply(WithDict, **json.loads(object_repr))
+            type_checked_call()(WithDict)(**json.loads(object_repr))
 
 
 class WithArgs:  # pylint: disable=too-few-public-methods
@@ -893,7 +883,7 @@ class TestUnpackingWithArgs(unittest.TestCase):
         """Invalid target class."""
         object_repr = '{}'
         with self.assertRaises(TypeError):
-            type_checked_apply(WithArgs, **json.loads(object_repr))
+            type_checked_call()(WithArgs)(**json.loads(object_repr))
 
 
 class WithKWArgs:  # pylint: disable=too-few-public-methods
@@ -910,7 +900,7 @@ class TestUnpackingWithKWArgs(unittest.TestCase):
         """Invalid target class."""
         object_repr = '{}'
         with self.assertRaises(TypeError):
-            type_checked_apply(WithKWArgs, **json.loads(object_repr))
+            type_checked_call()(WithKWArgs)(**json.loads(object_repr))
 
 
 class TestUnpackingToNonCallable(unittest.TestCase):
@@ -920,4 +910,4 @@ class TestUnpackingToNonCallable(unittest.TestCase):
         """Invalid target."""
         object_repr = '{}'
         with self.assertRaises(TypeError):
-            type_checked_apply("hi", **json.loads(object_repr))  # type: ignore
+            type_checked_call()("hi")(**json.loads(object_repr))  # type: ignore
