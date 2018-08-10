@@ -32,7 +32,7 @@ result = times_two(value)
 print(f'{value} * 2 == {result}')
 ```
 
-This is fine, it outputs `output: 2 * 2 = 4`.
+This is fine, it outputs `output: 3 * 2 = 6`.
 But what if `value` accidentally is `'3'` instead of `3`?
 The output will become `output: 3 * 2 = 33`, which *might* not be desired.
 
