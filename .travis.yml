@@ -11,9 +11,9 @@ install:
   - python3 -m pip install pylint
   - python3 -m pip install mypy
   - python3 -m pip install .
+script:
+  - python3 --version
   - find undictify -iname "*.py" | grep -v -e "__init__.py" | xargs -L 1 pylint
   - find undictify -iname "*.py" | grep -v -e "__init__.py" | xargs -L 1 mypy --strict
   - find undictify -iname "*.py" | grep -v -e "__init__.py" | xargs -L 1 python3 -m unittest
-script:
-  - python3 --version
   - python3 examples/readme_examples.py
