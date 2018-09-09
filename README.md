@@ -162,8 +162,6 @@ class Human(NamedTuple):
     friend_ids: List[int]
 ```
 
-(They do not need to be derived from `NamedTuple`. A normal class with a custom `__init__` function or a `@dataclass` works too.)
-
 Having the safety provided by the static type annotations (and probably checking your code with `mypy`) is a great because of all the:
 - bugs that don't make it into PROD
 - manual type checks (and matching unit tests) that you don't have to write
@@ -177,16 +175,17 @@ So you decide to use a library that does JSON schema validation for you.
 But now you have to manually adjust the schema every time your entity structure changes, which still is not DRY, and thus also brings with it all the typical possibilities to make mistakes.
 
 Undictify can help here too!
-Initialization of a `NamedTuple` is just a call to its constructor.
-So you simply need to annotate the classes with `type_cheked_call` and you are done:
+Annotate the classes `@type_checked_constructor` and their constructors will be wrapped in type-checked calls.
 ```python
-@type_checked_call()
+@type_checked_constructor()
 class Heart(NamedTuple):
     ...
-@type_checked_call()
+@type_checked_constructor()
 class Human(NamedTuple):
     ...
 ```
+
+(They do not need to be derived from `NamedTuple`. A normal class with a custom `__init__` function or a `@dataclass` works too.)
 
 Undictify will type-check the construction of objects of type `Heart` and `Human` automatically.
 (This works for normal classes with a manually written `__init__` function too.

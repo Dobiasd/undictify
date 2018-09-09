@@ -4,6 +4,7 @@ undictify - Type-checked function calls at runtime
 
 import inspect
 import sys
+from functools import wraps
 from typing import Any, Callable, Dict, List, Type, TypeVar, Union
 
 VER_3_7_AND_UP = sys.version_info[:3] >= (3, 7, 0)  # PEP 560
@@ -18,24 +19,97 @@ else:
 TypeT = TypeVar('TypeT')
 
 
+def type_checked_constructor(skip: bool = False,
+                             convert: bool = False) -> Callable[[Callable[..., TypeT]],
+                                                                Callable[..., TypeT]]:
+    """Replaces the constructor of the given class (in-place)
+    with type-checked calls."""
+
+    def call_decorator(func: Callable[..., TypeT]) -> Callable[..., TypeT]:
+        if not inspect.isclass(func):
+            raise TypeError('@_type_checked_constructor may only be used for classes.')
+
+        if _is_wrapped_func(func):
+            raise TypeError('Class is already wrapped by undictify.')
+
+        # Ideally we could prevent type_checked_constructor to be used
+        # as a normal function instead of a decorator.
+        # However this turns out to be very tricky,
+        # and given solutions break down on some corner cases.
+        # https://stackoverflow.com/questions/52191968/check-if-a-function-was-called-as-a-decorator
+
+        func_name = _get_log_name(func)
+
+        signature_new = inspect.signature(func.__new__)
+        signature_new_param_names = [param.name for param in signature_new.parameters.values()]
+        if signature_new_param_names != ['args', 'kwargs']:
+            signature_ctor = signature_new
+            replace_init = False
+            original_ctor = func.__new__
+        else:
+            original_ctor = func.__init__  # type: ignore
+            signature_ctor = inspect.signature(original_ctor)
+            replace_init = True
+
+        @wraps(original_ctor)
+        def wrapper(first_arg: Any, *args: Any, **kwargs: Any) -> TypeT:
+            kwargs_dict = _merge_args_and_kwargs(
+                signature_ctor, func_name, [first_arg] + list(args),
+                kwargs)
+            return _unpack_dict(  # type: ignore
+                original_ctor,
+                signature_ctor,
+                first_arg,
+                kwargs_dict,
+                skip,
+                convert)
+
+        if replace_init:
+            func.__init__ = wrapper  # type: ignore
+        else:
+            func.__new__ = wrapper  # type: ignore
+        setattr(func, '__undictify_wrapped_func__', func)
+        return func
+
+    return call_decorator
+
+
 def type_checked_call(skip: bool = False,
                       convert: bool = False) -> Callable[[Callable[..., TypeT]],
                                                          Callable[..., TypeT]]:
-    """Decorator that type checks arguments to every call of a function."""
+    """Wrap function with type checks."""
 
     def call_decorator(func: Callable[..., TypeT]) -> Callable[..., TypeT]:
         if _is_wrapped_func(func):
             raise TypeError('Function is already wrapped by undictify.')
 
+        signature = inspect.signature(func)
+        func_name = _get_log_name(func)
+
+        @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> TypeT:
-            return _unpack_dict(func,  # type: ignore
-                                _merge_args_and_kwargs(func, *args, **kwargs),
-                                skip, convert)
+            kwargs_dict = _merge_args_and_kwargs(signature, func_name,
+                                                 args, kwargs)
+            return _unpack_dict(  # type: ignore
+                func,
+                signature,
+                None,
+                kwargs_dict,
+                skip,
+                convert)
 
         setattr(wrapper, '__undictify_wrapped_func__', func)
         return wrapper
 
     return call_decorator
+
+
+def _get_log_name(var: Any) -> str:
+    """Return var.__name__ if available, 'this object' otherwise."""
+    try:
+        return str(var.__name__)
+    except AttributeError:
+        return 'this object'
 
 
 WrappedOrFunc = Callable[..., TypeT]
@@ -45,26 +119,27 @@ def _is_wrapped_func(func: WrappedOrFunc) -> bool:
     return hasattr(func, '__undictify_wrapped_func__')
 
 
-def _merge_args_and_kwargs(func: Callable[..., TypeT],
-                           *args: Any, **kwargs: Any) -> Dict[str, Any]:
+def _merge_args_and_kwargs(signature: inspect.Signature, name: str,
+                           args: Any, kwargs: Any) -> Dict[str, Any]:
     """Returns one kwargs dictionary or
     raises an exeption in case of overlapping-name problems."""
-    signature = inspect.signature(func)
     param_names = [param.name for param in signature.parameters.values()]
     if len(args) > len(param_names):
-        raise TypeError(f'Too many parameters for {func.__name__}.')
+        raise TypeError(f'Too many parameters for {name}.')
     args_as_kwargs = dict(zip(param_names, list(args)))
     keys_in_args_and_kwargs = set.intersection(set(args_as_kwargs.keys()),
                                                set(kwargs.keys()))
     if keys_in_args_and_kwargs:
         raise TypeError(f'The following parameters are given as '
-                        f'arg and kwarg in call of {func.__name__}: '
+                        f'arg and kwarg in call of {name}: '
                         f'{keys_in_args_and_kwargs}')
 
     return {**args_as_kwargs, **kwargs}
 
 
-def _unpack_dict(func: WrappedOrFunc,
+def _unpack_dict(func: WrappedOrFunc,  # pylint: disable=too-many-arguments
+                 signature: inspect.Signature,
+                 first_arg: Any,
                  data: Dict[str, Any],
                  skip_superfluous: bool,
                  convert_types: bool) -> Any:
@@ -72,7 +147,6 @@ def _unpack_dict(func: WrappedOrFunc,
 
     assert _is_dict(data), 'Argument data needs to be a dictionary.'
 
-    signature = inspect.signature(_unwrap_decorator_type(func))
     ctor_params: Dict[str, Any] = {}
 
     if not skip_superfluous:
@@ -82,7 +156,10 @@ def _unpack_dict(func: WrappedOrFunc,
         if superfluous:
             raise TypeError(f'Superfluous parameters in call: {superfluous}')
 
-    for param in signature.parameters.values():
+    parameter_values = list(signature.parameters.values())
+    if first_arg is not None:
+        parameter_values = parameter_values[1:]
+    for param in parameter_values:
         if param.kind != inspect.Parameter.POSITIONAL_OR_KEYWORD:
             raise TypeError('Only parameters of kind POSITIONAL_OR_KEYWORD '
                             'supported in target functions.')
@@ -104,6 +181,8 @@ def _unpack_dict(func: WrappedOrFunc,
                                                  skip_superfluous,
                                                  convert_types)
 
+    if first_arg is not None:
+        return _unwrap_decorator_type(func)(first_arg, **ctor_params)
     return _unwrap_decorator_type(func)(**ctor_params)
 
 

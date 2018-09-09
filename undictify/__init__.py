@@ -1,4 +1,4 @@
-from ._unpack import type_checked_call
+from ._unpack import type_checked_call, type_checked_constructor
 
 name = "undictify"
 

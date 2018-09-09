@@ -7,7 +7,7 @@ undictify - examples from README.md
 import json
 from typing import List, NamedTuple, Optional, Any
 
-from undictify import type_checked_call
+from undictify import type_checked_constructor
 
 __author__ = "Tobias Hermann"
 __copyright__ = "Copyright 2018, Tobias Hermann"
@@ -45,13 +45,13 @@ def intro_3():
     print(f'{value} * 2 == {result}')
 
 
-@type_checked_call(skip=True)
+@type_checked_constructor(skip=True)
 class Heart(NamedTuple):
     weight_in_kg: float
     pulse_at_rest: int
 
 
-@type_checked_call(skip=True)
+@type_checked_constructor(skip=True)
 class Human(NamedTuple):
     id: int
     name: str

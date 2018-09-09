@@ -3,11 +3,12 @@ undictify - tests
 """
 
 import json
+import pickle
 import unittest
 from typing import Any, Callable, Dict, List, NamedTuple, Optional, Union, Tuple
 from typing import TypeVar
 
-from ._unpack import type_checked_call
+from ._unpack import type_checked_call, type_checked_constructor
 
 TypeT = TypeVar('TypeT')
 
@@ -67,7 +68,7 @@ class Foo:  # pylint: disable=too-few-public-methods
         self.opt: Optional[int] = opt
 
 
-@type_checked_call()
+@type_checked_constructor()
 class FooDecorated:  # pylint: disable=too-few-public-methods
     """Some dummy class."""
 
@@ -90,7 +91,7 @@ class FooNamedTuple(NamedTuple):  # pylint: disable=too-few-public-methods
     opt: Optional[int]
 
 
-@type_checked_call()  # pylint: disable=too-few-public-methods
+@type_checked_constructor()  # pylint: disable=too-few-public-methods
 class FooNamedTupleDecorated(NamedTuple):
     """Some dummy class as a NamedTuple."""
     val: int
@@ -442,12 +443,21 @@ class TestErrorMessageOnIncorrectUsage(unittest.TestCase):
 class TestUseOnDecorated(unittest.TestCase):
     """Tests call of type_checked_call on already decorated function."""
 
-    def test_double_wrapping(self) -> None:
+    def test_double_wrapping_function(self) -> None:
         """Should error to avoid confusion."""
         data = {
             "val": 42, "msg": "hello", "frac": 3.14, "flag": True, "opt": 10}
         with self.assertRaises(TypeError):
             type_checked_call()(foo_function_type_checked_call)(**data)
+
+    def test_double_annotating_class(self) -> None:
+        """Should also error"""
+        with self.assertRaises(TypeError):
+            @type_checked_constructor()  # pylint: disable=too-few-public-methods,unused-variable
+            @type_checked_constructor()
+            class DoubleTypeCheckedCtor:
+                """Empty dummy"""
+                pass
 
 
 class Point:  # pylint: disable=too-few-public-methods
@@ -474,7 +484,7 @@ class Nested:  # pylint: disable=too-few-public-methods
         self.opt_pos2: Optional[Point] = opt_pos2
 
 
-@type_checked_call()
+@type_checked_constructor()
 class PointDecorated:  # pylint: disable=too-few-public-methods
     """Dummy point class."""
 
@@ -483,7 +493,7 @@ class PointDecorated:  # pylint: disable=too-few-public-methods
         self.y_val: int = y_val
 
 
-@type_checked_call(skip=True)
+@type_checked_constructor(skip=True)
 class PointDecoratedSkip:  # pylint: disable=too-few-public-methods
     """Dummy point class."""
 
@@ -492,7 +502,7 @@ class PointDecoratedSkip:  # pylint: disable=too-few-public-methods
         self.y_val: int = y_val
 
 
-@type_checked_call()
+@type_checked_constructor()
 class NestedDecorated:  # pylint: disable=too-few-public-methods
     """Dummy class with a non-primitive member."""
 
@@ -504,7 +514,7 @@ class NestedDecorated:  # pylint: disable=too-few-public-methods
         self.pos_list: List[PointDecorated] = pos_list
 
 
-@type_checked_call(convert=True)
+@type_checked_constructor(convert=True)
 class NestedDecoratedConvertPointSkip:  # pylint: disable=too-few-public-methods
     """Dummy class with a non-primitive member."""
 
@@ -513,7 +523,7 @@ class NestedDecoratedConvertPointSkip:  # pylint: disable=too-few-public-methods
         self.val: int = val
 
 
-@type_checked_call()  # pylint: disable=too-few-public-methods
+@type_checked_constructor()  # pylint: disable=too-few-public-methods
 class PointDecoratedNamedTuple(NamedTuple):
     """Dummy point class."""
 
@@ -521,7 +531,7 @@ class PointDecoratedNamedTuple(NamedTuple):
     y_val: int
 
 
-@type_checked_call()  # pylint: disable=too-few-public-methods
+@type_checked_constructor()  # pylint: disable=too-few-public-methods
 class NestedDecoratedNamedTuple(NamedTuple):
     """Dummy class with a non-primitive member."""
 
@@ -657,14 +667,14 @@ class TestUnpackingNested(unittest.TestCase):
             NestedDecoratedConvertPointSkip(**data)
 
 
-@type_checked_call()  # pylint: disable=too-few-public-methods
+@type_checked_constructor()  # pylint: disable=too-few-public-methods
 class Heart(NamedTuple):
     """Nested class"""
     weight_in_kg: float
     pulse_at_rest: int
 
 
-@type_checked_call()  # pylint: disable=too-few-public-methods
+@type_checked_constructor()  # pylint: disable=too-few-public-methods
 class Human(NamedTuple):
     """Class having a nested member"""
     id: int
@@ -804,7 +814,7 @@ class WithMemberFunc:  # pylint: disable=too-few-public-methods
         return str(self.val_1 + self.val_2) + msg
 
 
-@type_checked_call()
+@type_checked_constructor()
 class WithMemberFuncDecorated:  # pylint: disable=too-few-public-methods,unused-variable
     """Dummy class with a Union member."""
 
@@ -841,6 +851,17 @@ class TestUnpackingWithMemberFunc(unittest.TestCase):
         with_member_func = WithMemberFuncDecorated(**data)
         result = with_member_func.member_func('hello')
         self.assertEqual(result, '42hello')
+
+
+class TestPickle(unittest.TestCase):
+    """Annotated classes still need to work with pickle."""
+
+    def test_dumps_and_reads(self) -> None:
+        """Should work in both directions."""
+        foo_obj = FooDecorated(1, "hi", True, None, 1.2)
+        dump = pickle.dumps(foo_obj)
+        foo_obj = pickle.loads(dump)
+        self.assertEqual(1, foo_obj.val)
 
 
 class WithUnion:  # pylint: disable=too-few-public-methods
@@ -935,4 +956,4 @@ class TestUnpackingToNonCallable(unittest.TestCase):
         """Invalid target."""
         object_repr = '{}'
         with self.assertRaises(TypeError):
-            type_checked_call()("hi")(**json.loads(object_repr))  # type: ignore
+            type_checked_call()('hi')(**json.loads(object_repr))  # type: ignore
