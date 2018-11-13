@@ -185,7 +185,7 @@ class Human(NamedTuple):
     ...
 ```
 
-(They do not need to be derived from `NamedTuple`. A normal class with a custom `__init__` function or a `@dataclass` works too.)
+(They do not need to be derived from `NamedTuple`. A normal class with a custom `__init__` function or a `@dataclass` works too. For data classes just make sure to use `@type_checked_constructor()` above the `@dataclass`, not below.)
 
 Undictify will type-check the construction of objects of type `Heart` and `Human` automatically.
 (This works for normal classes with a manually written `__init__` function too.
