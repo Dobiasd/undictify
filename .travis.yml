@@ -15,6 +15,8 @@ install:
   - python3 -m pip install .
 script:
   - python3 --version
+  - echo ${exclude_file_pattern}
+  - echo exclude_file_pattern
   - find undictify -iname "*.py" | grep -v -e "__init__.py" -e ${exclude_file_pattern} | xargs -L 1 pylint
   - find undictify -iname "*.py" | grep -v -e "__init__.py" -e ${exclude_file_pattern} | xargs -L 1 mypy --strict
   - find undictify -iname "*.py" | grep -v -e "__init__.py" -e ${exclude_file_pattern} | xargs -L 1 python3 -m unittest
