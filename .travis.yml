@@ -3,10 +3,10 @@ matrix:
   include:
   - name: "3.6 Unit Test"
     python: "3.6-dev"
-    env: exclude_file_pattern=nothing
+    env: exclude_file_pattern=3_7_and_up
   - name: "3.7 Unit Test"
     python: "3.7"
-    env: exclude_file_pattern=3_7_and_up
+    env: exclude_file_pattern=nothing
     dist: xenial
     sudo: true
 install:
@@ -15,8 +15,6 @@ install:
   - python3 -m pip install .
 script:
   - python3 --version
-  - echo ${exclude_file_pattern}
-  - echo exclude_file_pattern
   - find undictify -iname "*.py" | grep -v -e "__init__.py" -e ${exclude_file_pattern} | xargs -L 1 pylint
   - find undictify -iname "*.py" | grep -v -e "__init__.py" -e ${exclude_file_pattern} | xargs -L 1 mypy --strict
   - find undictify -iname "*.py" | grep -v -e "__init__.py" -e ${exclude_file_pattern} | xargs -L 1 python3 -m unittest
