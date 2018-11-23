@@ -11,13 +11,13 @@ from ._unpack import type_checked_constructor
 
 
 @type_checked_constructor(convert=False, skip=False)  # pylint: disable=too-few-public-methods
-class WithTwoMembers(NamedTuple):
+class WithOneMember(NamedTuple):
     """Some dummy class as a NamedTuple."""
     val: int
 
 
 @type_checked_constructor(convert=True, skip=True)  # pylint: disable=too-few-public-methods
-class WithTwoMembersSkipConv(NamedTuple):
+class WithOneMemberSkipConv(NamedTuple):
     """Some dummy class as a NamedTuple."""
     val: int
 
@@ -27,11 +27,11 @@ class TestArgsCalls(unittest.TestCase):
 
     def test_simple(self) -> None:
         """Just one check to see if it works nonetheless"""
-        result = WithTwoMembers(val=42)
+        result = WithOneMember(val=42)
         self.assertEqual(result.val, 42)
 
     def test_skip_conv(self) -> None:
         """Just one check to see if it works nonetheless"""
         object_repr = '{"val": "42", "to_skip": "skip"}'
-        result = WithTwoMembersSkipConv(**json.loads(object_repr))
+        result = WithOneMemberSkipConv(**json.loads(object_repr))
         self.assertEqual(result.val, 42)
