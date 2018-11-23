@@ -1,11 +1,10 @@
 """
 undictify - Type-checked function calls at runtime
 """
-
 import inspect
 import sys
 from functools import wraps
-from typing import Any, Callable, Dict, List, Type, TypeVar, Union
+from typing import Any, Callable, Dict, List, Type, TypeVar, Union, get_type_hints
 
 VER_3_7_AND_UP = sys.version_info[:3] >= (3, 7, 0)  # PEP 560
 
@@ -40,7 +39,7 @@ def type_checked_constructor(skip: bool = False,
 
         func_name = _get_log_name(func)
 
-        signature_new = inspect.signature(func.__new__)
+        signature_new = _get_signature(func.__new__)
         signature_new_param_names = [param.name for param in signature_new.parameters.values()]
         if signature_new_param_names != ['args', 'kwargs']:
             signature_ctor = signature_new
@@ -48,7 +47,7 @@ def type_checked_constructor(skip: bool = False,
             original_ctor = func.__new__
         else:
             original_ctor = func.__init__  # type: ignore
-            signature_ctor = inspect.signature(original_ctor)
+            signature_ctor = _get_signature(original_ctor)
             replace_init = True
 
         @wraps(original_ctor)
@@ -83,7 +82,7 @@ def type_checked_call(skip: bool = False,
         if _is_wrapped_func(func):
             raise TypeError('Function is already wrapped by undictify.')
 
-        signature = inspect.signature(func)
+        signature = _get_signature(func)
         func_name = _get_log_name(func)
 
         @wraps(func)
@@ -366,3 +365,14 @@ def _unwrap_decorator_type(func: WrappedOrFunc) -> Callable[..., Any]:
 
 def _is_instance(value: TypeT, the_type: Callable[..., TypeT]) -> bool:
     return isinstance(value, the_type)  # type: ignore
+
+
+def _get_signature(func: WrappedOrFunc) -> inspect.Signature:
+    if hasattr(func, '__annotations__'):
+        # https://stackoverflow.com/questions/53450624/hasattr-telling-lies-attributeerror-method-object-has-no-attribute-annot
+        try:
+            func.__annotations__ = get_type_hints(func)
+            return inspect.signature(func)
+        except AttributeError:
+            return inspect.signature(func)
+    return inspect.signature(func)

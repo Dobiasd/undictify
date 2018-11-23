@@ -834,14 +834,14 @@ class TestUnpackingWithMemberFunc(unittest.TestCase):
     def test_ok(self) -> None:
         """Valid data dict."""
         data = {'val_1': 40, 'val_2': 2}
-        with_member_func = type_checked_call()(WithMemberFunc)(**data)
+        with_member_func = WithMemberFunc(**data)
         result = type_checked_call()(with_member_func.member_func)('hello')
         self.assertEqual(result, '42hello')
 
     def test_invalid_type(self) -> None:
         """Incorrect type."""
         data = {'val_1': 40, 'val_2': 2}
-        with_member_func = type_checked_call()(WithMemberFunc)(**data)
+        with_member_func = WithMemberFunc(**data)
         with self.assertRaises(TypeError):
             type_checked_call()(with_member_func.member_func)(3)
 
