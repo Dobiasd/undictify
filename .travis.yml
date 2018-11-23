@@ -7,6 +7,8 @@ matrix:
   - name: "3.7 Unit Test"
     python: "3.7"
     env: exclude_file_pattern=nothing
+    dist: xenial
+    sudo: true
 install:
   - python3 -m pip install pylint
   - python3 -m pip install mypy
