@@ -60,7 +60,7 @@ class Foo:  # pylint: disable=too-few-public-methods
 
     def __init__(self,  # pylint: disable=too-many-arguments,line-too-long
                  val: int, msg: str, flag: bool, opt: Optional[int],
-                 frac: float = 1.23) -> None:
+                 frac: float) -> None:
         self.val: int = val
         self.msg: str = msg
         self.frac: float = frac
@@ -74,7 +74,7 @@ class FooDecorated:  # pylint: disable=too-few-public-methods
 
     def __init__(self,  # pylint: disable=too-many-arguments,line-too-long
                  val: int, msg: str, flag: bool, opt: Optional[int],
-                 frac: float = 1.23) -> None:
+                 frac: float) -> None:
         self.val: int = val
         self.msg: str = msg
         self.frac: float = frac
@@ -471,9 +471,9 @@ class Point:  # pylint: disable=too-few-public-methods
 class Speed:  # pylint: disable=too-few-public-methods
     """Dummy point class."""
 
-    def __init__(self, x_vel: int, y_vel: int) -> None:
-        self.x_vel: int = x_vel
-        self.y_vel: int = y_vel
+    def __init__(self, x_val: int, y_val: int) -> None:
+        self.x_val: int = x_val
+        self.y_val: int = y_val
 
 
 class Nested:  # pylint: disable=too-few-public-methods
@@ -957,3 +957,25 @@ class TestUnpackingToNonCallable(unittest.TestCase):
         object_repr = '{}'
         with self.assertRaises(TypeError):
             type_checked_call()('hi')(**json.loads(object_repr))  # type: ignore
+
+
+class WithDefault(NamedTuple):  # pylint: disable=too-few-public-methods
+    """Some dummy class as a NamedTuple with one default value."""
+    val: int
+    msg: str = "hi"
+
+
+class TestWithDefault(unittest.TestCase):
+    """Make sure default values to not need to be provided."""
+
+    def test_all_provided(self) -> None:
+        """Should be OK."""
+        obj = type_checked_call()(WithDefault)(val=42, msg='hello')
+        self.assertEqual(obj.val, 42)
+        self.assertEqual(obj.msg, 'hello')
+
+    def test_only_needed_provided(self) -> None:
+        """Should be OK."""
+        obj = type_checked_call()(WithDefault)(val=42)
+        self.assertEqual(obj.val, 42)
+        self.assertEqual(obj.msg, 'hi')
