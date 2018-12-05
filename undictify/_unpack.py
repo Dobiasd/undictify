@@ -171,10 +171,6 @@ def _unpack_dict(func: WrappedOrFunc,  # pylint: disable=too-many-arguments
         if param.name not in data:
             if _is_optional_type(param.annotation):
                 ctor_params[param.name] = None
-            elif param.default != inspect._empty:
-                pass
-            else:
-                raise TypeError(f'Key {param.name} is missing.')
         else:
             ctor_params[param.name] = _get_value(param.annotation,
                                                  data[param.name],
