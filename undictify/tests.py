@@ -457,7 +457,7 @@ class TestUseOnDecorated(unittest.TestCase):
             @type_checked_constructor()
             class DoubleTypeCheckedCtor:
                 """Empty dummy"""
-                pass
+                pass  # pylint: disable=unnecessary-pass
 
 
 class Point:  # pylint: disable=too-few-public-methods
