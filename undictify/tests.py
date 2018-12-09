@@ -13,6 +13,8 @@ from ._unpack import type_checked_call, type_checked_constructor
 TypeT = TypeVar('TypeT')
 
 
+# pylint: disable=too-many-lines
+
 class WithTwoMembers(NamedTuple):  # pylint: disable=too-few-public-methods
     """Some dummy class as a NamedTuple."""
     val: int
@@ -979,3 +981,29 @@ class TestWithDefault(unittest.TestCase):
         obj = type_checked_call()(WithDefault)(val=42)
         self.assertEqual(obj.val, 42)
         self.assertEqual(obj.msg, 'hi')
+
+
+@type_checked_constructor()  # pylint: disable=too-few-public-methods
+class WithDocstring(NamedTuple):
+    """Some meaningful class docstring."""
+    pass  # pylint: disable=unnecessary-pass
+
+
+@type_checked_call()
+def with_docstring() -> None:
+    """Some meaningful function docstring."""
+    pass  # pylint: disable=unnecessary-pass
+
+
+class TestDocstrings(unittest.TestCase):
+    """Make sure docstrings are preserved by decorator."""
+
+    def test_class(self) -> None:
+        """Should still be there."""
+        self.assertEqual(WithDocstring.__doc__,
+                         """Some meaningful class docstring.""")
+
+    def test_function(self) -> None:
+        """Should still be there."""
+        self.assertEqual(with_docstring.__doc__,
+                         """Some meaningful function docstring.""")
