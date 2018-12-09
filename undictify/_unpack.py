@@ -114,7 +114,7 @@ def _get_log_name(var: Any) -> str:
 WrappedOrFunc = Callable[..., TypeT]
 
 
-def _is_wrapped_func(func: WrappedOrFunc) -> bool:
+def _is_wrapped_func(func: WrappedOrFunc[TypeT]) -> bool:
     return hasattr(func, '__undictify_wrapped_func__')
 
 
@@ -136,7 +136,7 @@ def _merge_args_and_kwargs(signature: inspect.Signature, name: str,
     return {**args_as_kwargs, **kwargs}
 
 
-def _unpack_dict(func: WrappedOrFunc,  # pylint: disable=too-many-arguments
+def _unpack_dict(func: WrappedOrFunc[TypeT],  # pylint: disable=too-many-arguments
                  signature: inspect.Signature,
                  first_arg: Any,
                  data: Dict[str, Any],
@@ -183,7 +183,7 @@ def _unpack_dict(func: WrappedOrFunc,  # pylint: disable=too-many-arguments
     return _unwrap_decorator_type(func)(**ctor_params)
 
 
-def _get_value(func: WrappedOrFunc, value: Any, log_name: str,
+def _get_value(func: WrappedOrFunc[TypeT], value: Any, log_name: str,
                skip_superfluous: bool, convert_types: bool) -> Any:
     """Convert a single value into target type if possible."""
     if _is_list(value):
@@ -354,7 +354,7 @@ def _is_list(value: TypeT) -> bool:
     return isinstance(value, list)
 
 
-def _unwrap_decorator_type(func: WrappedOrFunc) -> Callable[..., Any]:
+def _unwrap_decorator_type(func: WrappedOrFunc[TypeT]) -> Callable[..., Any]:
     """Get the actual type returned by the internal wrapper"""
     if _is_wrapped_func(func):
         return getattr(func, '__undictify_wrapped_func__')  # type: ignore
@@ -365,7 +365,7 @@ def _is_instance(value: TypeT, the_type: Callable[..., TypeT]) -> bool:
     return isinstance(value, the_type)  # type: ignore
 
 
-def _get_signature(func: WrappedOrFunc) -> inspect.Signature:
+def _get_signature(func: WrappedOrFunc[TypeT]) -> inspect.Signature:
     if hasattr(func, '__annotations__'):
         # https://stackoverflow.com/questions/53450624/hasattr-telling-lies-attributeerror-method-object-has-no-attribute-annot
         try:
