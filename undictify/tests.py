@@ -1007,3 +1007,59 @@ class TestDocstrings(unittest.TestCase):
         """Should still be there."""
         self.assertEqual(with_docstring.__doc__,
                          """Some meaningful function docstring.""")
+
+
+@type_checked_constructor(convert=True)
+class WithBoolMemberConvert(NamedTuple):  # pylint: disable=too-few-public-methods
+    """Some dummy class as a NamedTuple."""
+    flag: bool
+
+
+class TestStringToBool(unittest.TestCase):
+    """Make sure docstrings are preserved by decorator."""
+
+    def test_true_true(self) -> None:
+        """Should work."""
+        self.assertEqual(WithBoolMemberConvert(
+            **json.loads('{"flag": "TrUE"}')).flag, True)
+
+    def test_true_1(self) -> None:
+        """Should work."""
+        self.assertEqual(WithBoolMemberConvert(
+            **json.loads('{"flag": "1"}')).flag, True)
+
+    def test_true_on(self) -> None:
+        """Should work."""
+        self.assertEqual(WithBoolMemberConvert(
+            **json.loads('{"flag": "oN"}')).flag, True)
+
+    def test_true_yes(self) -> None:
+        """Should work."""
+        self.assertEqual(WithBoolMemberConvert(
+            **json.loads('{"flag": "yeS"}')).flag, True)
+
+    def test_false_false(self) -> None:
+        """Should work."""
+        self.assertEqual(WithBoolMemberConvert(
+            **json.loads('{"flag": "faLSe"}')).flag, False)
+
+    def test_false_0(self) -> None:
+        """Should work."""
+        self.assertEqual(WithBoolMemberConvert(
+            **json.loads('{"flag": "0"}')).flag, False)
+
+    def test_false_off(self) -> None:
+        """Should work."""
+        self.assertEqual(WithBoolMemberConvert(
+            **json.loads('{"flag": "off"}')).flag, False)
+
+    def test_true_no(self) -> None:
+        """Should work."""
+        self.assertEqual(WithBoolMemberConvert(
+            **json.loads('{"flag": "no"}')).flag, False)
+
+    def test_invalid(self) -> None:
+        """Should work."""
+        with self.assertRaises(TypeError):
+            WithBoolMemberConvert(
+                **json.loads('{"flag": "Yeah, do it!"}'))

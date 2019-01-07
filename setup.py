@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="undictify",
-    version="0.4.4",
+    version="0.5.0",
     author="Tobias Hermann",
     author_email="editgym@gmail.com",
     description="Type-checked function calls at runtime",

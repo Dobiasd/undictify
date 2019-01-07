@@ -208,6 +208,8 @@ def _get_value(func: WrappedOrFunc[TypeT], value: Any, log_name: str,
                 if _is_optional_type(func):
                     func = _get_optional_type(func)
                 try:
+                    if isinstance(value, str) and func is bool:
+                        return _string_to_bool(value)
                     return func(value)
                 except ValueError:
                     raise TypeError(f'Can not convert {value} '
@@ -220,6 +222,16 @@ def _get_value(func: WrappedOrFunc[TypeT], value: Any, log_name: str,
                             f'{_get_type_name(func)}.')
 
     return value
+
+
+def _string_to_bool(value: str) -> bool:
+    """In accordance to configparser.ConfigParser.getboolean"""
+    value_lower = value.lower()
+    if value_lower in ['1', 'yes', 'true', 'on']:
+        return True
+    if value_lower in ['0', 'no', 'false', 'off']:
+        return False
+    raise TypeError(f'Cannot convert string "{value}" to bool.')
 
 
 def _get_list_value(func: Callable[..., TypeT], value: Any,
