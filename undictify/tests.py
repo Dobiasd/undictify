@@ -738,7 +738,7 @@ class TestUnpackingWithAny(unittest.TestCase):
 
 
 class WithLists:  # pylint: disable=too-few-public-methods
-    """Dummy class with a Union member."""
+    """Dummy class with optional list members."""
 
     def __init__(self,
                  ints: List[int],
@@ -805,7 +805,7 @@ class TestUnpackingWithList(unittest.TestCase):
 
 
 class WithMemberFunc:  # pylint: disable=too-few-public-methods
-    """Dummy class with a Union member."""
+    """Dummy class with two ints."""
 
     def __init__(self, val_1: int, val_2: int) -> None:
         self.val_1: int = val_1
@@ -818,7 +818,7 @@ class WithMemberFunc:  # pylint: disable=too-few-public-methods
 
 @type_checked_constructor()
 class WithMemberFuncDecorated:  # pylint: disable=too-few-public-methods,unused-variable
-    """Dummy class with a Union member."""
+    """Dummy class with two ints."""
 
     def __init__(self, val_1: int, val_2: int) -> None:
         self.val_1: int = val_1
@@ -918,7 +918,7 @@ class TestUnpackingWithDict(unittest.TestCase):
 
 
 class WithArgs:  # pylint: disable=too-few-public-methods
-    """Dummy class with a Union member."""
+    """Dummy class with args member."""
 
     def __init__(self, *args: int) -> None:
         self.args: Any = args
@@ -935,7 +935,7 @@ class TestUnpackingWithArgs(unittest.TestCase):
 
 
 class WithKWArgs:  # pylint: disable=too-few-public-methods
-    """Dummy class with a Union member."""
+    """Dummy class with a kwargs member."""
 
     def __init__(self, **kwargs: int) -> None:
         self.kwargs: Any = kwargs
