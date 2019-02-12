@@ -866,7 +866,7 @@ class TestPickle(unittest.TestCase):
         self.assertEqual(1, foo_obj.val)
 
 
-class WithUnionOfBuildIns:  # pylint: disable=too-few-public-methods
+class WithUnionOfBuiltIns:  # pylint: disable=too-few-public-methods
     """Dummy class with a Union member."""
 
     def __init__(self, val: Union[int, str]) -> None:
@@ -881,12 +881,12 @@ class WithUnionOfClasses:  # pylint: disable=too-few-public-methods
 
 
 class TestUnpackingWithUnion(unittest.TestCase):
-    """Make sure such classes are rejected."""
+    """Make sure such only unions made of builtins are accepted."""
 
     def test_ok(self) -> None:
         """Valid JSON string."""
         object_repr = '{"val": "hi"}'
-        with_union = type_checked_call()(WithUnionOfBuildIns)(
+        with_union = type_checked_call()(WithUnionOfBuiltIns)(
             **json.loads(object_repr))
         self.assertEqual('hi', with_union.val)
 
@@ -917,18 +917,52 @@ class TestUnpackingWithoutTypeAnnotation(unittest.TestCase):
 class WithDict:  # pylint: disable=too-few-public-methods
     """Dummy class with a Dict member."""
 
-    def __init__(self, val: Dict[int, str]) -> None:
-        self.val: Dict[int, str] = val
+    def __init__(self, val: Dict[str, int]) -> None:
+        self.val: Dict[str, int] = val
+
+
+@type_checked_constructor()  # pylint: disable=too-few-public-methods
+class DictVal(NamedTuple):
+    """Some dummy class as a NamedTuple."""
+    val: int
+    msg: str
+
+
+class WithDictOfClass:  # pylint: disable=too-few-public-methods
+    """Dummy class with a Dict member."""
+
+    def __init__(self, val: Dict[str, DictVal]) -> None:
+        self.val: Dict[str, DictVal] = val
 
 
 class TestUnpackingWithDict(unittest.TestCase):
-    """Make sure such classes are rejected."""
+    """Make sure such dicts are supported."""
 
-    def test_str(self) -> None:
-        """Valid JSON string, but invalid target class."""
+    def test_builtin_val(self) -> None:
+        """Valid JSON string."""
         object_repr = '{"val": {"key1": 1, "key2": 2}}'
+        with_dict = type_checked_call()(WithDict)(**json.loads(object_repr))
+        self.assertEqual(1, with_dict.val['key1'])
+        self.assertEqual(2, with_dict.val['key2'])
+
+    def test_class_val(self) -> None:
+        """Valid JSON string."""
+        object_repr = '{"val": {"name": {"val": 1, "msg": "hi"}}}'
+        with_dict = type_checked_call()(WithDictOfClass)(**json.loads(object_repr))
+        self.assertEqual(1, with_dict.val['name'].val)
+        self.assertEqual('hi', with_dict.val['name'].msg)
+
+    def test_class_invalid_key_name(self) -> None:
+        """Invalid dict-key type."""
+        object_repr = '{"val": {"name": {"ha": 1, "msg": "hi"}}}'
         with self.assertRaises(TypeError):
-            type_checked_call()(WithDict)(**json.loads(object_repr))
+            type_checked_call()(WithDictOfClass)(**json.loads(object_repr))
+
+    def test_class_invalid_value_type(self) -> None:
+        """Invalid dict-value type."""
+        object_repr = '{"val": {"name": {"val": "ha", "msg": "hi"}}}'
+        with self.assertRaises(TypeError):
+            type_checked_call()(WithDictOfClass)(**json.loads(object_repr))
 
 
 class WithArgs:  # pylint: disable=too-few-public-methods

@@ -168,8 +168,6 @@ def _unpack_dict(func: WrappedOrFunc[TypeT],  # pylint: disable=too-many-argumen
             raise TypeError('Union members in target function'
                             'other than Optional or just built-in types'
                             'are not supported.')
-        if _is_dict_type(param.annotation):
-            raise TypeError('Dict members in target function are not supported.')
         if param.name not in data:
             if _is_optional_type(param.annotation):
                 call_arguments[param.name] = None
@@ -193,7 +191,8 @@ def _get_value(func: WrappedOrFunc[TypeT], value: Any, log_name: str,
                                skip_superfluous, convert_types)
 
     if _is_dict(value):
-        return _get_dict_value(func, value)  # Use settings of inner value
+        # Use settings of inner value
+        return _get_dict_value(func, value, skip_superfluous, convert_types)
 
     allowed_types = list(map(_unwrap_decorator_type, _get_union_types(func) \
         if _is_optional_type(func) \
@@ -251,10 +250,21 @@ def _get_list_value(func: Callable[..., TypeT], value: Any,
     return result
 
 
-def _get_dict_value(func: Callable[..., TypeT], value: Any) -> Any:
+def _get_dict_value(func: Callable[..., TypeT], value: Any,
+                    skip_superfluous: bool, convert_types: bool) -> Any:
     assert _is_dict(value)
     if _is_optional_type(func):
         return _get_optional_type(func)(**value)  # type: ignore
+    if _is_dict_type(func):
+        key_type = _get_dict_key_type(func)
+        value_type = _get_dict_value_type(func)
+        typed_dict = {}
+        for dict_key, dict_value in value.items():
+            typed_dict[_get_value(key_type, dict_key, 'dict_key',
+                                  skip_superfluous, convert_types)] = \
+                _get_value(value_type, dict_value, 'dict_value',
+                           skip_superfluous, convert_types)
+        return typed_dict
     return func(**value)
 
 
@@ -315,6 +325,22 @@ def _get_optional_type(optional_type: Callable[..., TypeT]) -> Type[TypeT]:
     args = optional_type.__args__  # type: ignore
     assert len(args) == 2
     return args[0]  # type: ignore
+
+
+def _get_dict_key_type(dict_type: Callable[..., TypeT]) -> Type[TypeT]:
+    """Return the type the keys of a Dict should have."""
+    assert _is_dict_type(dict_type)
+    args = dict_type.__args__  # type: ignore
+    assert len(args) == 2
+    return args[0]  # type: ignore
+
+
+def _get_dict_value_type(dict_type: Callable[..., TypeT]) -> Type[TypeT]:
+    """Return the type the values of a Dict should have."""
+    assert _is_dict_type(dict_type)
+    args = dict_type.__args__  # type: ignore
+    assert len(args) == 2
+    return args[1]  # type: ignore
 
 
 def _get_type_name(the_type: Callable[..., TypeT]) -> str:
