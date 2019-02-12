@@ -866,21 +866,35 @@ class TestPickle(unittest.TestCase):
         self.assertEqual(1, foo_obj.val)
 
 
-class WithUnion:  # pylint: disable=too-few-public-methods
+class WithUnionOfBuildIns:  # pylint: disable=too-few-public-methods
     """Dummy class with a Union member."""
 
     def __init__(self, val: Union[int, str]) -> None:
         self.val: Union[int, str] = val
 
 
+class WithUnionOfClasses:  # pylint: disable=too-few-public-methods
+    """Dummy class with a Union member."""
+
+    def __init__(self, val: Union[str, FooNamedTuple]) -> None:
+        self.val: Union[str, FooNamedTuple] = val
+
+
 class TestUnpackingWithUnion(unittest.TestCase):
     """Make sure such classes are rejected."""
 
-    def test_str(self) -> None:
+    def test_ok(self) -> None:
+        """Valid JSON string."""
+        object_repr = '{"val": "hi"}'
+        with_union = type_checked_call()(WithUnionOfBuildIns)(
+            **json.loads(object_repr))
+        self.assertEqual('hi', with_union.val)
+
+    def test_not_ok(self) -> None:
         """Valid JSON string, but invalid target class."""
         object_repr = '{"val": "hi"}'
         with self.assertRaises(TypeError):
-            type_checked_call()(WithUnion)(**json.loads(object_repr))
+            type_checked_call()(WithUnionOfClasses)(**json.loads(object_repr))
 
 
 class WithoutTypeAnnotation:  # pylint: disable=too-few-public-methods

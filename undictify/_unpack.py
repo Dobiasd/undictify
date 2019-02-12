@@ -146,7 +146,7 @@ def _unpack_dict(func: WrappedOrFunc[TypeT],  # pylint: disable=too-many-argumen
 
     assert _is_dict(data), 'Argument data needs to be a dictionary.'
 
-    ctor_params: Dict[str, Any] = {}
+    call_arguments: Dict[str, Any] = {}
 
     if not skip_superfluous:
         param_names = [param.name for param in signature.parameters.values()]
@@ -163,24 +163,26 @@ def _unpack_dict(func: WrappedOrFunc[TypeT],  # pylint: disable=too-many-argumen
             raise TypeError('Only parameters of kind POSITIONAL_OR_KEYWORD '
                             'supported in target functions.')
         if _is_union_type(param.annotation) \
-                and not _is_optional_type(param.annotation):
-            raise TypeError('Union members in target function other than Optional '
+                and not _is_optional_type(param.annotation) \
+                and not _is_union_of_builtins_type(param.annotation):
+            raise TypeError('Union members in target function'
+                            'other than Optional or just built-in types'
                             'are not supported.')
         if _is_dict_type(param.annotation):
             raise TypeError('Dict members in target function are not supported.')
         if param.name not in data:
             if _is_optional_type(param.annotation):
-                ctor_params[param.name] = None
+                call_arguments[param.name] = None
         else:
-            ctor_params[param.name] = _get_value(param.annotation,
-                                                 data[param.name],
-                                                 param.name,
-                                                 skip_superfluous,
-                                                 convert_types)
+            call_arguments[param.name] = _get_value(param.annotation,
+                                                    data[param.name],
+                                                    param.name,
+                                                    skip_superfluous,
+                                                    convert_types)
 
     if first_arg is not None:
-        return _unwrap_decorator_type(func)(first_arg, **ctor_params)
-    return _unwrap_decorator_type(func)(**ctor_params)
+        return _unwrap_decorator_type(func)(first_arg, **call_arguments)
+    return _unwrap_decorator_type(func)(**call_arguments)
 
 
 def _get_value(func: WrappedOrFunc[TypeT], value: Any, log_name: str,
@@ -354,6 +356,20 @@ def _is_optional_type(the_type: Callable[..., TypeT]) -> bool:
         return False
     union_args = _get_union_types(the_type)
     return len(union_args) == 2 and _is_instance(None, union_args[1])
+
+
+def _is_union_of_builtins_type(the_type: Callable[..., TypeT]) -> bool:
+    """Return True if the type is an Union only made of
+    None, str, int, float and bool."""
+    if not _is_union_type(the_type):
+        return False
+    union_args = _get_union_types(the_type)
+    return all(map(_is_builtin_type, union_args))
+
+
+def _is_builtin_type(the_type: Callable[..., TypeT]) -> bool:
+    """Return True if the value is a None, str, int, float or bool."""
+    return the_type in [str, int, bool, float, type(None)]
 
 
 def _is_dict(value: TypeT) -> bool:
