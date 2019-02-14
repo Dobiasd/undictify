@@ -890,7 +890,20 @@ class TestUnpackingWithUnion(unittest.TestCase):
             **json.loads(object_repr))
         self.assertEqual('hi', with_union.val)
 
-    def test_not_ok(self) -> None:
+    def test_not_ok_builtin(self) -> None:
+        """Valid JSON string, but invalid target class."""
+        object_repr = '{"val": true}'
+        with self.assertRaises(TypeError):
+            type_checked_call()(WithUnionOfBuiltIns)(**json.loads(object_repr))
+
+    def test_convert_builtin(self) -> None:
+        """Disallow conversion when Unions are used as target."""
+        object_repr = '{"val": true}'
+        with self.assertRaises(TypeError):
+            type_checked_call(convert=True)(WithUnionOfBuiltIns)(
+                **json.loads(object_repr))
+
+    def test_not_ok_class(self) -> None:
         """Valid JSON string, but invalid target class."""
         object_repr = '{"val": "hi"}'
         with self.assertRaises(TypeError):

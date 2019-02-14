@@ -195,7 +195,7 @@ def _get_value(func: WrappedOrFunc[TypeT], value: Any, log_name: str,
         return _get_dict_value(func, value, skip_superfluous, convert_types)
 
     allowed_types = list(map(_unwrap_decorator_type, _get_union_types(func) \
-        if _is_optional_type(func) \
+        if _is_optional_type(func) or _is_union_type(func) \
         else [func]))
 
     if func is inspect.Parameter.empty and log_name != 'self':
@@ -208,6 +208,14 @@ def _get_value(func: WrappedOrFunc[TypeT], value: Any, log_name: str,
             if convert_types:
                 if _is_optional_type(func):
                     func = _get_optional_type(func)
+                if _is_union_type(func):
+                    raise TypeError(f'The convert flag must be set to False '
+                                    f'when Unions are used to avoid '
+                                    f'ambiguities.'
+                                    f'Thus {value} is not converted '
+                                    f'from type {_get_type_name(value_type)} '
+                                    f'into type {_get_type_name(func)} '
+                                    f'for key {log_name}.')
                 try:
                     if isinstance(value, str) and func is bool:
                         return _string_to_bool(value)
@@ -347,6 +355,9 @@ def _get_type_name(the_type: Callable[..., TypeT]) -> str:
     """Return a printable name of a type."""
     if _is_optional_type(the_type):
         return f'Optional[{str(_get_optional_type(the_type).__name__)}]'
+    if _is_union_type(the_type):
+        union_type_names = [t.__name__ for t in _get_union_types(the_type)]
+        return f'Union[{", ".join(union_type_names)}]'
     if _is_list_type(the_type):
         return f'List[{str(_get_list_type_elem_type(the_type).__name__)}]'
     return the_type.__name__
@@ -369,7 +380,7 @@ def _isinstanceofone(value: Callable[..., TypeT], types: List[Callable[..., Type
             if _isinstanceofone(value, _get_union_types(the_type)):
                 return True
         try:
-            if _is_instance(value, the_type):  # type: ignore
+            if type(value) == the_type:  # pylint: disable=unidiomatic-typecheck
                 return True
         except TypeError:
             pass
