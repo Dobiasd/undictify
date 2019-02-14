@@ -273,6 +273,8 @@ def _get_dict_value(func: Callable[..., TypeT], value: Any,
                 _get_value(value_type, dict_value, 'dict_value',
                            skip_superfluous, convert_types)
         return typed_dict
+    if func is Any:
+        return value
     return func(**value)
 
 

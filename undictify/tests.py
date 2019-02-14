@@ -948,6 +948,11 @@ class WithDictOfClass:  # pylint: disable=too-few-public-methods
         self.val: Dict[str, DictVal] = val
 
 
+class WithNestedDict(NamedTuple):
+    """Some dummy class as a NamedTuple."""
+    val: Dict[str, Dict[str, Any]]
+
+
 class TestUnpackingWithDict(unittest.TestCase):
     """Make sure such dicts are supported."""
 
@@ -964,6 +969,12 @@ class TestUnpackingWithDict(unittest.TestCase):
         with_dict = type_checked_call()(WithDictOfClass)(**json.loads(object_repr))
         self.assertEqual(1, with_dict.val['name'].val)
         self.assertEqual('hi', with_dict.val['name'].msg)
+
+    def test_nested(self) -> None:
+        """Valid JSON string."""
+        object_repr = '{"val": {"foo": {"bar": {"msg": 1}}}}'
+        with_dict = type_checked_call()(WithNestedDict)(**json.loads(object_repr))
+        self.assertEqual(1, with_dict.val['foo']['bar']['msg'])
 
     def test_class_invalid_key_name(self) -> None:
         """Invalid dict-key type."""
