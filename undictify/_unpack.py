@@ -177,47 +177,51 @@ def _unpack_dict(func: WrappedOrFunc[TypeT],  # pylint: disable=too-many-argumen
             if _is_optional_type(param.annotation):
                 call_arguments[param.name] = None
         else:
-            if converters and param.name in converters:
-                value = converters[param.name](data[param.name])
-                if not isinstance(value, param.annotation):
-                    raise TypeError(f'Custom conversion for {param.name} '
-                                    f'yields incorrect target type: '
-                                    f'{_get_type_name(type(value))}')
-                call_arguments[param.name] = value
-            else:
-                call_arguments[param.name] = _get_value(param.annotation,
-                                                        data[param.name],
-                                                        param.name,
-                                                        skip_superfluous,
-                                                        convert_types)
+            call_arguments[param.name] = _get_value(param.annotation,
+                                                    data[param.name],
+                                                    param.name,
+                                                    skip_superfluous,
+                                                    convert_types,
+                                                    converters)
 
     if first_arg is not None:
         return _unwrap_decorator_type(func)(first_arg, **call_arguments)
     return _unwrap_decorator_type(func)(**call_arguments)
 
 
-def _get_value(func: WrappedOrFunc[TypeT], value: Any, log_name: str,
-               skip_superfluous: bool, convert_types: bool) -> Any:
+def _get_value(func: WrappedOrFunc[TypeT],  # pylint: disable=too-many-arguments
+               value: Any, param_name: str,
+               skip_superfluous: bool, convert_types: bool,
+               converters: Optional[Dict[str, Callable[[Any], Any]]]) -> Any:
     """Convert a single value into target type if possible."""
     if _is_list(value):
-        return _get_list_value(func, value, log_name,
-                               skip_superfluous, convert_types)
+        return _get_list_value(func, value, param_name,
+                               skip_superfluous, convert_types,
+                               converters)
 
     if _is_dict(value):
         # Use settings of inner value
-        return _get_dict_value(func, value, skip_superfluous, convert_types)
+        return _get_dict_value(func, value, skip_superfluous, convert_types,
+                               converters)
 
     allowed_types = list(map(_unwrap_decorator_type, _get_union_types(func) \
         if _is_optional_type(func) or _is_union_type(func) \
         else [func]))
 
-    if func is inspect.Parameter.empty and log_name != 'self':
-        raise TypeError(f'Parameter {log_name} of target function '
+    if func is inspect.Parameter.empty and param_name != 'self':
+        raise TypeError(f'Parameter {param_name} of target function '
                         'is missing a type annotation.')
 
-    if Any not in allowed_types and log_name != 'self':
+    if Any not in allowed_types and param_name != 'self':
         if not _isinstanceofone(value, allowed_types):
             value_type = type(value)
+            if converters and param_name in converters:
+                result = converters[param_name](value)
+                if not _isinstanceofone(result, allowed_types):
+                    raise TypeError(f'Custom conversion for {param_name} '
+                                    f'yields incorrect target type: '
+                                    f'{_get_type_name(type(result))}')
+                return result
             if convert_types:
                 if _is_optional_type(func):
                     func = _get_optional_type(func)
@@ -228,7 +232,7 @@ def _get_value(func: WrappedOrFunc[TypeT], value: Any, log_name: str,
                                     f'Thus {value} is not converted '
                                     f'from type {_get_type_name(value_type)} '
                                     f'into type {_get_type_name(func)} '
-                                    f'for key {log_name}.')
+                                    f'for key {param_name}.')
                 try:
                     if isinstance(value, str) and func is bool:
                         return _string_to_bool(value)
@@ -237,9 +241,9 @@ def _get_value(func: WrappedOrFunc[TypeT], value: Any, log_name: str,
                     raise TypeError(f'Can not convert {value} '
                                     f'from type {_get_type_name(value_type)} '
                                     f'into type {_get_type_name(func)} '
-                                    f'for key {log_name}.')
+                                    f'for key {param_name}.')
 
-            raise TypeError(f'Key {log_name} has incorrect type: '
+            raise TypeError(f'Key {param_name} has incorrect type: '
                             f'{_get_type_name(value_type)} instead of '
                             f'{_get_type_name(func)}.')
 
@@ -256,9 +260,10 @@ def _string_to_bool(value: str) -> bool:
     raise TypeError(f'Cannot convert string "{value}" to bool.')
 
 
-def _get_list_value(func: Callable[..., TypeT], value: Any,
-                    log_name: str,
-                    skip_superfluous: bool, convert_types: bool) -> Any:
+def _get_list_value(func: Callable[..., TypeT],  # pylint: disable=too-many-arguments
+                    value: Any, log_name: str,
+                    skip_superfluous: bool, convert_types: bool,
+                    converters: Optional[Dict[str, Callable[[Any], Any]]]) -> Any:
     if not _is_list_type(func) and \
             not _is_optional_list_type(func):
         raise TypeError(f'No list expected for {log_name}')
@@ -267,12 +272,14 @@ def _get_list_value(func: Callable[..., TypeT], value: Any,
     for elem in value:
         result.append(_get_value(result_elem_type,
                                  elem, value,
-                                 skip_superfluous, convert_types))
+                                 skip_superfluous, convert_types,
+                                 converters))
     return result
 
 
 def _get_dict_value(func: Callable[..., TypeT], value: Any,
-                    skip_superfluous: bool, convert_types: bool) -> Any:
+                    skip_superfluous: bool, convert_types: bool,
+                    converters: Optional[Dict[str, Callable[[Any], Any]]]) -> Any:
     assert _is_dict(value)
     if _is_optional_type(func):
         return _get_optional_type(func)(**value)  # type: ignore
@@ -282,9 +289,11 @@ def _get_dict_value(func: Callable[..., TypeT], value: Any,
         typed_dict = {}
         for dict_key, dict_value in value.items():
             typed_dict[_get_value(key_type, dict_key, 'dict_key',
-                                  skip_superfluous, convert_types)] = \
+                                  skip_superfluous, convert_types,
+                                  converters)] = \
                 _get_value(value_type, dict_value, 'dict_value',
-                           skip_superfluous, convert_types)
+                           skip_superfluous, convert_types,
+                           converters)
         return typed_dict
     if func is Any:
         return value

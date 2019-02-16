@@ -1154,6 +1154,18 @@ class NeedingCustomConverter(NamedTuple):
     timestamp: datetime
 
 
+@type_checked_constructor()
+class NeedingCustomConverterDecorated(NamedTuple):
+    """Some dummy class as a NamedTuple."""
+    msg: str
+    timestamp: datetime
+
+
+class HasMemberNeedingCustomConverter(NamedTuple):
+    """Some dummy class as a NamedTuple."""
+    needs_conversion: NeedingCustomConverterDecorated
+
+
 class TestCustomConverter(unittest.TestCase):
     """Sometimes pythons default conversions are not enough."""
 
@@ -1164,6 +1176,20 @@ class TestCustomConverter(unittest.TestCase):
             **json.loads(object_repr))
         self.assertEqual('hi', obj.msg)
         self.assertEqual(datetime(2005, 6, 1, 13, 33), obj.timestamp)
+
+    def test_datetime_already_converted(self) -> None:
+        """Valid JSON string."""
+        obj = type_checked_call(converters={'timestamp': parse_timestamp})(NeedingCustomConverter)(
+            **{"msg": "hi", "timestamp": datetime(2005, 6, 1, 13, 33)})
+        self.assertEqual('hi', obj.msg)
+        self.assertEqual(datetime(2005, 6, 1, 13, 33), obj.timestamp)
+
+    def test_converters_shall_not_be_forwarded(self) -> None:
+        """Custom converters shall only be applied to the outer call."""
+        object_repr = '{"needs_conversion": {"msg": "hi", "timestamp": "Jun 1 2005  1:33PM"}}'
+        with self.assertRaises(TypeError):
+            type_checked_call(converters={'timestamp': parse_timestamp})(
+                HasMemberNeedingCustomConverter)(**json.loads(object_repr))
 
     def test_invalid_converter_result_type(self) -> None:
         """Valid JSON string, but incorrect converter."""
