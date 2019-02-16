@@ -5,6 +5,7 @@ undictify - tests
 import json
 import pickle
 import unittest
+from datetime import datetime
 from typing import Any, Callable, Dict, List, NamedTuple, Optional, Union, Tuple
 from typing import TypeVar
 
@@ -1135,3 +1136,38 @@ class TestStringToBool(unittest.TestCase):
         with self.assertRaises(TypeError):
             WithBoolMemberConvert(
                 **json.loads('{"flag": "Yeah, do it!"}'))
+
+
+def parse_timestamp(datetime_repr: str) -> datetime:
+    """Construct a datetime object from a string."""
+    return datetime.strptime(datetime_repr, '%b %d %Y %I:%M%p')
+
+
+def forward_str(str_repr: str) -> str:
+    """Forward string argument."""
+    return str_repr
+
+
+class NeedingCustomConverter(NamedTuple):
+    """Some dummy class as a NamedTuple."""
+    msg: str
+    timestamp: datetime
+
+
+class TestCustomConverter(unittest.TestCase):
+    """Sometimes pythons default conversions are not enough."""
+
+    def test_datetime_ok(self) -> None:
+        """Valid JSON string."""
+        object_repr = '{"msg": "hi", "timestamp": "Jun 1 2005  1:33PM"}'
+        obj = type_checked_call(converters={'timestamp': parse_timestamp})(NeedingCustomConverter)(
+            **json.loads(object_repr))
+        self.assertEqual('hi', obj.msg)
+        self.assertEqual(datetime(2005, 6, 1, 13, 33), obj.timestamp)
+
+    def test_invalid_converter_result_type(self) -> None:
+        """Valid JSON string, but incorrect converter."""
+        object_repr = '{"msg": "hi", "timestamp": "Jun 1 2005  1:33PM"}'
+        with self.assertRaises(TypeError):
+            type_checked_call(converters={'timestamp': forward_str})(NeedingCustomConverter)(
+                **json.loads(object_repr))

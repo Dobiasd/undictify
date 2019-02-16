@@ -4,7 +4,7 @@ undictify - Type-checked function calls at runtime
 import inspect
 import sys
 from functools import wraps
-from typing import Any, Callable, Dict, List, Type, TypeVar, Union, get_type_hints
+from typing import Any, Callable, Dict, List, Optional, Type, TypeVar, Union, get_type_hints
 
 VER_3_7_AND_UP = sys.version_info[:3] >= (3, 7, 0)  # PEP 560
 
@@ -19,8 +19,9 @@ TypeT = TypeVar('TypeT')
 
 
 def type_checked_constructor(skip: bool = False,
-                             convert: bool = False) -> Callable[[Callable[..., TypeT]],
-                                                                Callable[..., TypeT]]:
+                             convert: bool = False,
+                             converters: Optional[Dict[str, Callable[[Any], Any]]] = None) \
+        -> Callable[[Callable[..., TypeT]], Callable[..., TypeT]]:
     """Replaces the constructor of the given class (in-place)
     with type-checked calls."""
 
@@ -61,7 +62,8 @@ def type_checked_constructor(skip: bool = False,
                 first_arg,
                 kwargs_dict,
                 skip,
-                convert)
+                convert,
+                converters)
 
         if replace_init:
             func.__init__ = wrapper  # type: ignore
@@ -74,8 +76,9 @@ def type_checked_constructor(skip: bool = False,
 
 
 def type_checked_call(skip: bool = False,
-                      convert: bool = False) -> Callable[[Callable[..., TypeT]],
-                                                         Callable[..., TypeT]]:
+                      convert: bool = False,
+                      converters: Optional[Dict[str, Callable[[Any], Any]]] = None) \
+        -> Callable[[Callable[..., TypeT]], Callable[..., TypeT]]:
     """Wrap function with type checks."""
 
     def call_decorator(func: Callable[..., TypeT]) -> Callable[..., TypeT]:
@@ -95,7 +98,8 @@ def type_checked_call(skip: bool = False,
                 None,
                 kwargs_dict,
                 skip,
-                convert)
+                convert,
+                converters)
 
         setattr(wrapper, '__undictify_wrapped_func__', func)
         return wrapper
@@ -141,7 +145,8 @@ def _unpack_dict(func: WrappedOrFunc[TypeT],  # pylint: disable=too-many-argumen
                  first_arg: Any,
                  data: Dict[str, Any],
                  skip_superfluous: bool,
-                 convert_types: bool) -> Any:
+                 convert_types: bool,
+                 converters: Optional[Dict[str, Callable[[Any], Any]]]) -> Any:
     """Constructs an object in a type-safe way from a dictionary."""
 
     assert _is_dict(data), 'Argument data needs to be a dictionary.'
@@ -172,11 +177,19 @@ def _unpack_dict(func: WrappedOrFunc[TypeT],  # pylint: disable=too-many-argumen
             if _is_optional_type(param.annotation):
                 call_arguments[param.name] = None
         else:
-            call_arguments[param.name] = _get_value(param.annotation,
-                                                    data[param.name],
-                                                    param.name,
-                                                    skip_superfluous,
-                                                    convert_types)
+            if converters and param.name in converters:
+                value = converters[param.name](data[param.name])
+                if not isinstance(value, param.annotation):
+                    raise TypeError(f'Custom conversion for {param.name} '
+                                    f'yields incorrect target type: '
+                                    f'{_get_type_name(type(value))}')
+                call_arguments[param.name] = value
+            else:
+                call_arguments[param.name] = _get_value(param.annotation,
+                                                        data[param.name],
+                                                        param.name,
+                                                        skip_superfluous,
+                                                        convert_types)
 
     if first_arg is not None:
         return _unwrap_decorator_type(func)(first_arg, **call_arguments)
