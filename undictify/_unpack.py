@@ -170,8 +170,8 @@ def _unpack_dict(func: WrappedOrFunc[TypeT],  # pylint: disable=too-many-argumen
         if _is_union_type(param.annotation) \
                 and not _is_optional_type(param.annotation) \
                 and not _is_union_of_builtins_type(param.annotation):
-            raise TypeError('Union members in target function'
-                            'other than Optional or just built-in types'
+            raise TypeError('Union members in target function '
+                            'other than Optional or just built-in types '
                             'are not supported.')
         if param.name not in data:
             if _is_optional_type(param.annotation):
@@ -228,7 +228,7 @@ def _get_value(func: WrappedOrFunc[TypeT],  # pylint: disable=too-many-arguments
                 if _is_union_type(func):
                     raise TypeError(f'The convert flag must be set to False '
                                     f'when Unions are used to avoid '
-                                    f'ambiguities.'
+                                    f'ambiguities. '
                                     f'Thus {value} is not converted '
                                     f'from type {_get_type_name(value_type)} '
                                     f'into type {_get_type_name(func)} '
