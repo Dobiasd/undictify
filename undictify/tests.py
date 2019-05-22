@@ -1197,3 +1197,35 @@ class TestCustomConverter(unittest.TestCase):
         with self.assertRaises(TypeError):
             type_checked_call(converters={'timestamp': forward_str})(NeedingCustomConverter)(
                 **json.loads(object_repr))
+
+
+@type_checked_constructor()
+class WithOptionalUnion(NamedTuple):
+    """Some dummy class with an optional Union."""
+    name: str
+    a: Union[None, int]
+    b: Union[int, None]
+    c: Union[None, int, float]
+    d: Union[int, None, float]
+    e: Union[int, float, None]
+    f: Optional[Union[int, float]]
+    g: Optional[Union[int, None]]
+    h: Optional[Union[None, int]]
+
+
+class TestOptionalUnion(unittest.TestCase):
+    """Optional should be allowed to be left out"""
+
+    def test_all_given(self) -> None:
+        """Valid JSON string."""
+        object_repr = '''{"name": "foo", "a": 1, "b": 2,
+                         "c": 3, "d": 4, "e": 5, "f": 6, "g": 7, "h": 8}'''
+        obj = WithOptionalUnion(**json.loads(object_repr))
+        self.assertEqual('foo', obj.name)
+        self.assertEqual(1, obj.a)
+
+    def test_without_optionals(self) -> None:
+        """Valid JSON string."""
+        object_repr = '{"name": "foo"}'
+        obj = WithOptionalUnion(**json.loads(object_repr))
+        self.assertEqual('foo', obj.name)

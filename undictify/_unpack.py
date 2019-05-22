@@ -416,7 +416,7 @@ def _is_optional_type(the_type: Callable[..., TypeT]) -> bool:
     if not _is_union_type(the_type):
         return False
     union_args = _get_union_types(the_type)
-    return len(union_args) == 2 and _is_instance(None, union_args[1])
+    return any(_is_none_type(union_arg) for union_arg in union_args)
 
 
 def _is_union_of_builtins_type(the_type: Callable[..., TypeT]) -> bool:
@@ -429,8 +429,13 @@ def _is_union_of_builtins_type(the_type: Callable[..., TypeT]) -> bool:
 
 
 def _is_builtin_type(the_type: Callable[..., TypeT]) -> bool:
-    """Return True if the value is a None, str, int, float or bool."""
+    """Return True if the type is a NoneType, str, int, float or bool."""
     return the_type in [str, int, bool, float, type(None)]
+
+
+def _is_none_type(value: TypeT) -> bool:
+    """Return True if the value is of NoneType."""
+    return value is type(None)
 
 
 def _is_dict(value: TypeT) -> bool:
