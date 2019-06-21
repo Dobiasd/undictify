@@ -150,11 +150,13 @@ if isinstance(... # *yawn*
 
 and then transfer it into a type-safe class instance:
 ```python
-class Heart(NamedTuple):
+@dataclass
+class Heart:
     weight_in_kg: float
     pulse_at_rest: int
 
-class Human(NamedTuple):
+@dataclass
+class Human:
     id: int
     name: str
     nick: Optional[str]
@@ -178,14 +180,16 @@ Undictify can help here too!
 Annotate the classes `@type_checked_constructor` and their constructors will be wrapped in type-checked calls.
 ```python
 @type_checked_constructor()
-class Heart(NamedTuple):
+@dataclass
+class Heart:
     ...
 @type_checked_constructor()
-class Human(NamedTuple):
+@dataclass
+class Human:
     ...
 ```
 
-(They do not need to be derived from `NamedTuple`. A normal class with a custom `__init__` function or a `@dataclass` works too. For data classes just make sure to use `@type_checked_constructor()` above the `@dataclass`, not below.)
+(They do not need to be `dataclass`es. Deriving from `NamedTuple` works too.)
 
 Undictify will type-check the construction of objects of type `Heart` and `Human` automatically.
 (This works for normal classes with a manually written `__init__` function too.
