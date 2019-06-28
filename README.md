@@ -23,7 +23,7 @@ Table of contents
 Introduction
 ------------
 Let's start with a toy example:
-```python
+```python3
 def times_two(value):
     return 2 * value
 
@@ -37,7 +37,7 @@ But what if `value` accidentally is `'3'` instead of `3`?
 The output will become `output: 3 * 2 = 33`, which *might* not be desired.
 
 So you add something like
-```python
+```python3
 if not isinstance(value, int):
     raise TypeError(...)
 ```
@@ -46,7 +46,7 @@ But you still only recognize the mistake when actually running the code.
 Catching it earlier in the development process might be better.
 Luckily Python allows to opt-in for static typing by offering [type annotations](https://docs.python.org/3/library/typing.html).
 So you add them and [`mypy`](http://mypy-lang.org/) (or your IDE) will tell you about the problem early.
-```python
+```python3
 def times_two(value: int) -> int:
     return 2 * value
 
@@ -63,7 +63,7 @@ because of values:
 - being provided as a `Dict[str, Any]`
 - etc.
 
-```python
+```python3
 def times_two(value: int) -> int:
     return 2 * value
         
@@ -83,7 +83,7 @@ But the process of writing that boilerplate validation code can become quite cum
 Also it is not very [DRY](https://en.wikipedia.org/wiki/Don%27t_repeat_yourself) since you already have the needed type information in our function signature and you just duplicated it in the check condition.
 
 This is where undictify comes into play. Simply decorate your `times_two` function with `@type_checked_call()`:
-```python
+```python3
 from undictify import type_checked_call
 
 @type_checked_call()
@@ -102,7 +102,7 @@ Use case: JSON deserialization
 
 Imagine your application receives a JSON string representing an entity you need to handle:
 
-```python
+```python3
 tobias_json = '''
     {
         "id": 1,
@@ -118,7 +118,7 @@ tobias = json.loads(tobias_json)
 ```
 
 Now you start to work with it. Somewhere deep in your business logic you have:
-```python
+```python3
 name_length = len(tobias['name'])
 ```
 But that's only fine if the original JSON string was well-behaved.
@@ -128,7 +128,7 @@ If it had `"name": 4,` in it, you would get:
 TypeError: object of type 'int' has no len()
 ```
 at runtime, which is not nice. So you start to manually add type checking:
-```python
+```python3
 if isinstance(tobias['name'], str):
     name_length = len(tobias['name'])
 else:
@@ -139,7 +139,7 @@ You quickly realize that you need to separate concerns better,
 in that case the business logic and the input data validation.
 
 So you start to do all checks directly after receiving the data:
-```python
+```python3
 tobias = json.loads(...
 if isinstance(tobias['id'], int):
     ...
@@ -149,7 +149,7 @@ if isinstance(... # *yawn*
 ```
 
 and then transfer it into a type-safe class instance:
-```python
+```python3
 @dataclass
 class Heart:
     weight_in_kg: float
@@ -178,7 +178,7 @@ But now you have to manually adjust the schema every time your entity structure 
 
 Undictify can help here too!
 Annotate the classes `@type_checked_constructor` and their constructors will be wrapped in type-checked calls.
-```python
+```python3
 @type_checked_constructor()
 @dataclass
 class Heart:
@@ -195,7 +195,7 @@ Undictify will type-check the construction of objects of type `Heart` and `Human
 (This works for normal classes with a manually written `__init__` function too.
 You just need to provide the type annotations to its parameters.) So you can use the usual dictionary unpacking syntax, to safely convert your untyped dictionary (i.e., `Dict[str, Any]`) resulting from the JSON string into your statically typed class:
 
-```python
+```python3
 tobias = Human(**json.loads(tobias_json))
 ```
 
@@ -218,7 +218,7 @@ For these cases undictify provides `@type_checked_call(skip=True)`.
 
 It also supports valid type conversions via `@type_checked_call(convert=True)`,
 which might for example come in handy when processing the arguments of an HTTP request you receive for example in a `get` handler of a `flask_restful.Resource` class:
-```python
+```python3
 @type_checked_call(convert=True)
 def target_function(some_int: int, some_str: str)
 
@@ -235,7 +235,7 @@ but `http://.../foo?some_int=four&some_str=hi` would raise an appropriate `TypeE
 
 Additional flexibility is offered for cases in which you would like to not type-check all calls of a specific function / class constructor, but only some. You can use `type_checked_call()` at call site instead of adding the annotation for those:
 
-```python
+```python3
 from undictify import type_checked_call
 
 def times_two(value: int) -> int:
@@ -243,6 +243,26 @@ def times_two(value: int) -> int:
 
 value: Any = '3'
 resutl = type_checked_call()(times_two)(value)
+```
+
+And last but not least, custom converters for specified parameters are also supported:
+
+```python3
+import datetime
+import json
+from dataclasses import dataclass
+
+import dateutil.parser
+from undictify import type_checked_constructor
+
+@type_checked_constructor(converters={'some_timestamp': dateutil.parser.isoparse})
+@dataclass
+class Foo:
+    some_timestamp: datetime.datetime
+
+json_repr = '{"some_timestamp": "2019-06-28T07:20:34.028Z"}'
+my_foo = Foo(**json.loads(json_repr))
+print(my_foo)
 ```
 
 
