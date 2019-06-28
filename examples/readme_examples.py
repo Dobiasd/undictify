@@ -5,6 +5,8 @@ undictify - examples from README.md
 """
 
 import json
+from dataclasses import dataclass
+from datetime import datetime
 from typing import List, NamedTuple, Optional, Any
 
 from undictify import type_checked_constructor
@@ -75,11 +77,28 @@ def json_1():
     assert len(tobias.friend_ids) == 4
 
 
+def parse_timestamp(datetime_repr: str) -> datetime:
+    return datetime.strptime(datetime_repr, '%Y-%m-%dT%H:%M:%SZ')
+
+
+@type_checked_constructor(converters={'some_timestamp': parse_timestamp})
+@dataclass
+class Foo:
+    some_timestamp: datetime
+
+
+def custom_converter_1():
+    json_repr = '{"some_timestamp": "2019-06-28T07:20:34Z"}'
+    my_foo = Foo(**json.loads(json_repr))
+    print(my_foo)
+
+
 def main():
     intro_1()
     intro_2()
     intro_3()
     json_1()
+    custom_converter_1()
 
 
 if __name__ == "__main__":

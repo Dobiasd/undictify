@@ -248,21 +248,22 @@ resutl = type_checked_call()(times_two)(value)
 And last but not least, custom converters for specified parameters are also supported:
 
 ```python3
-import datetime
 import json
 from dataclasses import dataclass
+from datetime import datetime
 
-import dateutil.parser
 from undictify import type_checked_constructor
 
-@type_checked_constructor(converters={'some_timestamp': dateutil.parser.isoparse})
+def parse_timestamp(datetime_repr: str) -> datetime:
+    return datetime.strptime(datetime_repr, '%Y-%m-%dT%H:%M:%SZ
+
+@type_checked_constructor(converters={'some_timestamp': parse_timestamp})
 @dataclass
 class Foo:
-    some_timestamp: datetime.datetime
+    some_timestamp: datetime
 
-json_repr = '{"some_timestamp": "2019-06-28T07:20:34.028Z"}'
+json_repr = '{"some_timestamp": "2019-06-28T07:20:34Z"}'
 my_foo = Foo(**json.loads(json_repr))
-print(my_foo)
 ```
 
 
