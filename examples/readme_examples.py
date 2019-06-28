@@ -5,7 +5,6 @@ undictify - examples from README.md
 """
 
 import json
-from dataclasses import dataclass
 from datetime import datetime
 from typing import List, NamedTuple, Optional, Any
 
@@ -82,8 +81,7 @@ def parse_timestamp(datetime_repr: str) -> datetime:
 
 
 @type_checked_constructor(converters={'some_timestamp': parse_timestamp})
-@dataclass
-class Foo:
+class Foo(NamedTuple):
     some_timestamp: datetime
 
 
