@@ -67,7 +67,7 @@ def type_checked_constructor(skip: bool = False,
             func.__new__ = wrapper(func.__new__, signature_new)  # type: ignore
         else:
             func.__init__ = wrapper(func.__init__, _get_signature(func.__init__))  # type: ignore
-            if is_dataclass(func) and hasattr(func, '__post_init__'):
+            if _is_dataclass(func) and hasattr(func, '__post_init__'):
                 func.__post_init__ = wrapper(func.__post_init__, _get_signature(func.__post_init__))  # type: ignore
         setattr(func, '__undictify_wrapped_func__', func)
         return func
@@ -446,6 +446,13 @@ def _is_builtin_type(the_type: Callable[..., TypeT]) -> bool:
 def _is_none_type(value: TypeT) -> bool:
     """Return True if the value is of NoneType."""
     return value is type(None)
+
+
+def _is_dataclass(value: TypeT) -> bool:
+    """Return True if the value is a dataclass"""
+    if VER_3_7_AND_UP:
+        return is_dataclass(value)
+    return False
 
 
 def _is_dict(value: TypeT) -> bool:
