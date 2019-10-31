@@ -5,6 +5,7 @@ undictify - tests
 import json
 import pickle
 import unittest
+import sys
 from datetime import datetime
 from typing import Any, Callable, Dict, List, NamedTuple, Optional, Union, Tuple
 from typing import TypeVar
@@ -12,6 +13,11 @@ from typing import TypeVar
 from ._unpack import type_checked_call, type_checked_constructor
 
 TypeT = TypeVar('TypeT')
+
+VER_3_7_AND_UP = sys.version_info[:3] >= (3, 7, 0)  # PEP 560
+
+if VER_3_7_AND_UP:
+    import dataclasses
 
 
 # pylint: disable=too-many-lines
@@ -1229,3 +1235,51 @@ class TestOptionalUnion(unittest.TestCase):
         object_repr = '{"name": "foo"}'
         obj = WithOptionalUnion(**json.loads(object_repr))
         self.assertEqual('foo', obj.name)
+
+
+@unittest.skipIf(not VER_3_7_AND_UP,
+                 "Python version is not high enough")
+class TestDataClasses(unittest.TestCase):
+    """Tests that data classes work as expected"""
+
+    def setUp(self):
+        @type_checked_constructor()
+        @dataclasses.dataclass
+        class MyClass:
+
+            x: int
+            y: int
+            my_initvar: dataclasses.InitVar[str]
+            extra_field: str = dataclasses.field(init=False)
+
+            def __post_init__(self, my_initvar: str) -> None:
+                self.extra_field = my_initvar + ' is ok'
+
+        self.MyClass = MyClass
+
+    def test_dataclass_initvars_unpack_correctly(self):
+        result = self.MyClass(**{'x': 1, 'y': 2, 'my_initvar': 'hello'})
+        self.assertEqual(result.x, 1)
+        self.assertEqual(result.y, 2)
+        self.assertEqual(result.extra_field, 'hello is ok')
+
+    def test_dataclass_initvars_fail_on_wrong_type(self):
+        with self.assertRaises(TypeError):
+            self.MyClass(**{'x': 1, 'y': 2, 'my_initvar': 3})
+
+
+    def test_known_bug_initvar_as_argument_passes(self):
+        """Our treatment of InitVar could result in a weird bug if InitVar is
+        used outside the context of a dataclass (for example, as a function
+        argument)"""
+        @type_checked_call()
+        def hello(x: dataclasses.InitVar, y: dataclasses.InitVar, z: int) -> str:
+            return f"{x} and {y} and {z}"
+
+        # this won't raise an error despite the fact that x and y do not have
+        # the type "InitVar". Could be a problem for a person who is doing lots
+        # of dark Python magic or something
+        hello(**{'x': 'hello', 'y': 'world', 'z': 12})
+
+        with self.assertRaises(TypeError):
+            hello(**{'x': 'hello', 'y': 'world', 'z': 'twelve'})
