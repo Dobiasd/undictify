@@ -304,9 +304,17 @@ def _get_dict_value(func: Callable[..., TypeT], value: Any,
 
 
 def _is_initvar_type(the_type: Callable[..., TypeT]) -> bool:
-    """Return True if the type is an InitVar"""
+    """Return True if the type is an InitVar
+
+    In Python 3.7, InitVar is essentially a singleton.
+        InitVar[str] == InitVar[int]
+    In Python 3.8, InitVar can be a singleton, or an instance.
+        InitVar[str] != InitVar[int], but InitVar == InitVar
+
+    Therefore, the code below checks for both cases to support 3.7 and 3.8
+    """
     if VER_3_7_AND_UP:
-        return the_type == InitVar
+        return the_type == InitVar or isinstance(the_type, InitVar)
     return False
 
 
