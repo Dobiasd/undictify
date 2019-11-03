@@ -1267,6 +1267,66 @@ class TestDataClasses(unittest.TestCase):
         with self.assertRaises(TypeError):
             self.MyClass(**{'x': 1, 'y': 2, 'my_initvar': 3})
 
+    def test_unpacks_lists_and_dicts_with_initvars(self):
+        """InitVar check parsing must take place before Lists and Dicts
+
+        This test ensures that unpacking of lists and dicts happens correctly
+        in the presence of InitVars
+        """
+        @type_checked_constructor()
+        @dataclasses.dataclass
+        class Friend:
+
+            a: int
+            b: int
+
+        @type_checked_constructor()
+        @dataclasses.dataclass
+        class Hello:
+
+            x: int
+            y: int
+            z: str = dataclasses.field(init=False)
+            i: dataclasses.InitVar[List[Friend]]
+
+            def __post_init__(self, i: List[Friend]) -> None:
+                self.z = str(i)
+
+        @type_checked_constructor()
+        @dataclasses.dataclass
+        class Outer:
+            b: int
+            a: List[Hello]
+
+        input_dict = {
+            "b": 12,
+            "a": [
+                {
+                    "x": 12,
+                    "y": 13,
+                    "i": [
+                        {
+                            "a": 12,
+                            "b": 123123,
+                        },
+                    ],
+                },
+            ],
+        }
+        expected = Outer(
+            b=12,
+            a=[
+                Hello(
+                    x=12,
+                    y=13,
+                    i=[Friend(a=12, b=123123)],
+                )
+            ]
+        )
+        self.assertEqual(expected, Outer(**input_dict))
+        the_one_friend = expected.a[0]
+        self.assertEqual(the_one_friend.z, str([Friend(12, 123123)]))
+        self.assertFalse(hasattr(the_one_friend, 'i'))
 
     def test_known_bug_initvar_as_argument_passes(self):
         """Our treatment of InitVar could result in a weird bug if InitVar is

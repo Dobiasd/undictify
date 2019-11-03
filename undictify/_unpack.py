@@ -194,6 +194,9 @@ def _get_value(func: WrappedOrFunc[TypeT],  # pylint: disable=too-many-arguments
                skip_superfluous: bool, convert_types: bool,
                converters: Optional[Dict[str, Callable[[Any], Any]]]) -> Any:
     """Convert a single value into target type if possible."""
+    if _is_initvar_type(func):
+        return value
+
     if _is_list(value):
         return _get_list_value(func, value, param_name,
                                skip_superfluous, convert_types,
@@ -203,9 +206,6 @@ def _get_value(func: WrappedOrFunc[TypeT],  # pylint: disable=too-many-arguments
         # Use settings of inner value
         return _get_dict_value(func, value, skip_superfluous, convert_types,
                                converters)
-
-    if _is_initvar_type(func):
-        return value
 
     allowed_types = list(map(_unwrap_decorator_type, _get_union_types(func) \
         if _is_optional_type(func) or _is_union_type(func) \
@@ -269,6 +269,7 @@ def _get_list_value(func: Callable[..., TypeT],  # pylint: disable=too-many-argu
                     converters: Optional[Dict[str, Callable[[Any], Any]]]) -> Any:
     if not _is_list_type(func) and \
             not _is_optional_list_type(func):
+        print(func)
         raise TypeError(f'No list expected for {log_name}')
     result = []
     result_elem_type = _get_list_type_elem_type(func)
