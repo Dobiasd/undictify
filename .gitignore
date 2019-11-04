@@ -7,4 +7,3 @@ __pycache__
 .mypy_cache
 /github_issues
 /Dockerfile*
-/docker-compose.yml
