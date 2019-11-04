@@ -269,7 +269,6 @@ def _get_list_value(func: Callable[..., TypeT],  # pylint: disable=too-many-argu
                     converters: Optional[Dict[str, Callable[[Any], Any]]]) -> Any:
     if not _is_list_type(func) and \
             not _is_optional_list_type(func):
-        print(func)
         raise TypeError(f'No list expected for {log_name}')
     result = []
     result_elem_type = _get_list_type_elem_type(func)
