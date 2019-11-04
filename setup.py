@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="undictify",
-    version="0.6.5",
+    version="0.7.0",
     author="Tobias Hermann",
     author_email="editgym@gmail.com",
     description="Type-checked function calls at runtime",
@@ -16,6 +16,7 @@ setuptools.setup(
     classifiers=(
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ),
