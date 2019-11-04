@@ -9,6 +9,11 @@ matrix:
     env: exclude_file_pattern=nothing
     dist: xenial
     sudo: true
+  - name: "3.8 Unit Test"
+    python: "3.8"
+    env: exclude_file_pattern=nothing
+    dist: xenial
+    sudo: true
 install:
   - python3 -m pip install pylint
   - python3 -m pip install mypy
