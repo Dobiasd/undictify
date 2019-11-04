@@ -11,6 +11,7 @@ VER_3_7_AND_UP = sys.version_info[:3] >= (3, 7, 0)  # PEP 560
 # pylint: disable=no-name-in-module
 if VER_3_7_AND_UP:
     from typing import _GenericAlias  # type: ignore
+    from dataclasses import InitVar, is_dataclass
 else:
     from typing import _Union  # type: ignore
 # pylint: enable=no-name-in-module
@@ -40,35 +41,34 @@ def type_checked_constructor(skip: bool = False,
 
         func_name = _get_log_name(func)
 
+        def wrapper(original_func: Callable[..., TypeT],
+                    original_signature: inspect.Signature) \
+                -> Callable[..., TypeT]:
+
+            @wraps(original_func)
+            def inner(first_arg: Any, *args: Any, **kwargs: Any) -> TypeT:
+                kwargs_dict = _merge_args_and_kwargs(
+                    original_signature, func_name, [first_arg] + list(args),
+                    kwargs)
+                return _unpack_dict(  # type: ignore
+                    original_func,
+                    original_signature,
+                    first_arg,
+                    kwargs_dict,
+                    skip,
+                    convert,
+                    converters)
+            return inner
+
         signature_new = _get_signature(func.__new__)
         signature_new_param_names = [param.name for param in signature_new.parameters.values()]
+
         if signature_new_param_names != ['args', 'kwargs']:
-            signature_ctor = signature_new
-            replace_init = False
-            original_ctor = func.__new__
+            func.__new__ = wrapper(func.__new__, signature_new)  # type: ignore
         else:
-            original_ctor = func.__init__  # type: ignore
-            signature_ctor = _get_signature(original_ctor)
-            replace_init = True
-
-        @wraps(original_ctor)
-        def wrapper(first_arg: Any, *args: Any, **kwargs: Any) -> TypeT:
-            kwargs_dict = _merge_args_and_kwargs(
-                signature_ctor, func_name, [first_arg] + list(args),
-                kwargs)
-            return _unpack_dict(  # type: ignore
-                original_ctor,
-                signature_ctor,
-                first_arg,
-                kwargs_dict,
-                skip,
-                convert,
-                converters)
-
-        if replace_init:
-            func.__init__ = wrapper  # type: ignore
-        else:
-            func.__new__ = wrapper  # type: ignore
+            func.__init__ = wrapper(func.__init__, _get_signature(func.__init__))  # type: ignore
+            if _is_dataclass(func) and hasattr(func, '__post_init__'):
+                func.__post_init__ = wrapper(func.__post_init__, _get_signature(func.__post_init__))  # type: ignore
         setattr(func, '__undictify_wrapped_func__', func)
         return func
 
@@ -194,6 +194,9 @@ def _get_value(func: WrappedOrFunc[TypeT],  # pylint: disable=too-many-arguments
                skip_superfluous: bool, convert_types: bool,
                converters: Optional[Dict[str, Callable[[Any], Any]]]) -> Any:
     """Convert a single value into target type if possible."""
+    if _is_initvar_type(func):
+        return value
+
     if _is_list(value):
         return _get_list_value(func, value, param_name,
                                skip_superfluous, convert_types,
@@ -298,6 +301,21 @@ def _get_dict_value(func: Callable[..., TypeT], value: Any,
     if func is Any:
         return value
     return func(**value)
+
+
+def _is_initvar_type(the_type: Callable[..., TypeT]) -> bool:
+    """Return True if the type is an InitVar
+
+    In Python 3.7, InitVar is essentially a singleton.
+        InitVar[str] == InitVar[int]
+    In Python 3.8, InitVar can be a singleton, or an instance.
+        InitVar[str] != InitVar[int], but InitVar == InitVar
+
+    Therefore, the code below checks for both cases to support 3.7 and 3.8
+    """
+    if VER_3_7_AND_UP:
+        return the_type == InitVar or isinstance(the_type, InitVar)
+    return False
 
 
 def _is_union_type(the_type: Callable[..., TypeT]) -> bool:
@@ -436,6 +454,13 @@ def _is_builtin_type(the_type: Callable[..., TypeT]) -> bool:
 def _is_none_type(value: TypeT) -> bool:
     """Return True if the value is of NoneType."""
     return value is type(None)
+
+
+def _is_dataclass(value: TypeT) -> bool:
+    """Return True if the value is a dataclass"""
+    if VER_3_7_AND_UP:
+        return is_dataclass(value)
+    return False
 
 
 def _is_dict(value: TypeT) -> bool:
