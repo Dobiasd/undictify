@@ -4,8 +4,8 @@ undictify - tests
 
 import json
 import pickle
-import unittest
 import sys
+import unittest
 from datetime import datetime
 from typing import Any, Callable, Dict, List, NamedTuple, Optional, Union, Tuple
 from typing import TypeVar
@@ -17,7 +17,7 @@ TypeT = TypeVar('TypeT')
 VER_3_7_AND_UP = sys.version_info[:3] >= (3, 7, 0)  # PEP 560
 
 if VER_3_7_AND_UP:
-    import dataclasses
+    import dataclasses  # pylint: disable=import-error
 
 
 # pylint: disable=too-many-lines
@@ -1242,11 +1242,11 @@ class TestOptionalUnion(unittest.TestCase):
 class TestDataClasses(unittest.TestCase):
     """Tests that data classes work as expected"""
 
-    def setUp(self):
+    def setUp(self) -> None:
         @type_checked_constructor()
         @dataclasses.dataclass
-        class MyClass:
-
+        class MyClass:  # pylint: disable=too-few-public-methods
+            """With an InitVar"""
             x: int
             y: int
             my_initvar: dataclasses.InitVar[str]
@@ -1255,46 +1255,50 @@ class TestDataClasses(unittest.TestCase):
             def __post_init__(self, my_initvar: str) -> None:
                 self.extra_field = my_initvar + ' is ok'
 
-        self.MyClass = MyClass
+        self.MyClass = MyClass  # pylint: disable=invalid-name
 
-    def test_dataclass_initvars_unpack_correctly(self):
-        result = self.MyClass(**{'x': 1, 'y': 2, 'my_initvar': 'hello'})
+    def test_dataclass_initvars_unpack_correctly(self) -> None:
+        """Should succeed"""
+        result = self.MyClass(**json.loads('{"x": 1, "y": 2, "my_initvar": "hello"}'))
         self.assertEqual(result.x, 1)
         self.assertEqual(result.y, 2)
         self.assertEqual(result.extra_field, 'hello is ok')
 
-    def test_dataclass_initvars_fail_on_wrong_type(self):
+    def test_dataclass_initvars_fail_on_wrong_type(self) -> None:
+        """Should fail"""
         with self.assertRaises(TypeError):
-            self.MyClass(**{'x': 1, 'y': 2, 'my_initvar': 3})
+            self.MyClass(**json.loads('{"x": 1, "y": 2, "my_initvar": 3}'))
 
-    def test_unpacks_lists_and_dicts_with_initvars(self):
+    def test_unpacks_lists_and_dicts_with_initvars(self) -> None:
         """InitVar check parsing must take place before Lists and Dicts
 
         This test ensures that unpacking of lists and dicts happens correctly
         in the presence of InitVars
         """
+
         @type_checked_constructor()
         @dataclasses.dataclass
-        class Friend:
-
+        class Friend:  # pylint: disable=too-few-public-methods
+            """Only plain members"""
             a: int
             b: int
 
         @type_checked_constructor()
         @dataclasses.dataclass
-        class Hello:
-
-            x: int
-            y: int
-            z: str = dataclasses.field(init=False)
+        class Hello:  # pylint: disable=too-few-public-methods
+            """With an InitVar"""
+            x: int  # pylint: disable=invalid-name
+            y: int  # pylint: disable=invalid-name
+            z: str = dataclasses.field(init=False)  # pylint: disable=invalid-name
             i: dataclasses.InitVar[List[Friend]]
 
             def __post_init__(self, i: List[Friend]) -> None:
-                self.z = str(i)
+                self.z = str(i)  # pylint: disable=invalid-name
 
         @type_checked_constructor()
         @dataclasses.dataclass
-        class Outer:
+        class Outer:  # pylint: disable=too-few-public-methods
+            """With a list of objects with InitVars"""
             b: int
             a: List[Hello]
 
@@ -1323,17 +1327,19 @@ class TestDataClasses(unittest.TestCase):
                 )
             ]
         )
-        self.assertEqual(expected, Outer(**input_dict))
+        self.assertEqual(expected, Outer(**json.loads(json.dumps(input_dict))))
         the_one_friend = expected.a[0]
         self.assertEqual(the_one_friend.z, str([Friend(12, 123123)]))
         self.assertFalse(hasattr(the_one_friend, 'i'))
 
-    def test_known_bug_initvar_as_argument_passes(self):
+    def test_known_bug_initvar_as_argument_passes(self) -> None:
         """Our treatment of InitVar could result in a weird bug if InitVar is
         used outside the context of a dataclass (for example, as a function
         argument)"""
+
         @type_checked_call()
-        def hello(x: dataclasses.InitVar, y: dataclasses.InitVar, z: int) -> str:
+        def hello(x: dataclasses.InitVar[Any], y: dataclasses.InitVar[Any],
+                  z: int) -> str:  # pylint: disable=invalid-name
             return f"{x} and {y} and {z}"
 
         # this won't raise an error despite the fact that x and y do not have

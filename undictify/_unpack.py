@@ -8,13 +8,13 @@ from typing import Any, Callable, Dict, List, Optional, Type, TypeVar, Union, ge
 
 VER_3_7_AND_UP = sys.version_info[:3] >= (3, 7, 0)  # PEP 560
 
-# pylint: disable=no-name-in-module
+# pylint: disable=no-name-in-module,ungrouped-imports,import-error
 if VER_3_7_AND_UP:
     from typing import _GenericAlias  # type: ignore
     from dataclasses import InitVar, is_dataclass
 else:
     from typing import _Union  # type: ignore
-# pylint: enable=no-name-in-module
+# pylint: enable=no-name-in-module,ungrouped-imports,import-error
 
 TypeT = TypeVar('TypeT')
 
@@ -58,6 +58,7 @@ def type_checked_constructor(skip: bool = False,
                     skip,
                     convert,
                     converters)
+
             return inner
 
         signature_new = _get_signature(func.__new__)
@@ -68,7 +69,8 @@ def type_checked_constructor(skip: bool = False,
         else:
             func.__init__ = wrapper(func.__init__, _get_signature(func.__init__))  # type: ignore
             if _is_dataclass(func) and hasattr(func, '__post_init__'):
-                func.__post_init__ = wrapper(func.__post_init__, _get_signature(func.__post_init__))  # type: ignore
+                func.__post_init__ = wrapper(func.__post_init__,  # type: ignore
+                                             _get_signature(func.__post_init__))  # type: ignore
         setattr(func, '__undictify_wrapped_func__', func)
         return func
 
@@ -189,7 +191,8 @@ def _unpack_dict(func: WrappedOrFunc[TypeT],  # pylint: disable=too-many-argumen
     return _unwrap_decorator_type(func)(**call_arguments)
 
 
-def _get_value(func: WrappedOrFunc[TypeT],  # pylint: disable=too-many-arguments
+# pylint: disable=too-many-arguments,too-many-return-statements,too-many-branches
+def _get_value(func: WrappedOrFunc[TypeT],
                value: Any, param_name: str,
                skip_superfluous: bool, convert_types: bool,
                converters: Optional[Dict[str, Callable[[Any], Any]]]) -> Any:
