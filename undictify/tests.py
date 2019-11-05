@@ -1247,8 +1247,8 @@ class TestDataClasses(unittest.TestCase):
         @dataclasses.dataclass
         class MyClass:  # pylint: disable=too-few-public-methods
             """With an InitVar"""
-            x: int
-            y: int
+            x: int  # pylint: disable=invalid-name
+            y: int  # pylint: disable=invalid-name
             my_initvar: dataclasses.InitVar[str]
             extra_field: str = dataclasses.field(init=False)
 
@@ -1280,8 +1280,8 @@ class TestDataClasses(unittest.TestCase):
         @dataclasses.dataclass
         class Friend:  # pylint: disable=too-few-public-methods
             """Only plain members"""
-            a: int
-            b: int
+            a: int  # pylint: disable=invalid-name
+            b: int  # pylint: disable=invalid-name
 
         @type_checked_constructor()
         @dataclasses.dataclass
@@ -1299,8 +1299,8 @@ class TestDataClasses(unittest.TestCase):
         @dataclasses.dataclass
         class Outer:  # pylint: disable=too-few-public-methods
             """With a list of objects with InitVars"""
-            b: int
-            a: List[Hello]
+            b: int  # pylint: disable=invalid-name
+            a: List[Hello]  # pylint: disable=invalid-name
 
         input_dict = {
             "b": 12,
@@ -1338,7 +1338,7 @@ class TestDataClasses(unittest.TestCase):
         argument)"""
 
         @type_checked_call()
-        def hello(x: dataclasses.InitVar[Any], y: dataclasses.InitVar[Any],
+        def hello(x: dataclasses.InitVar[Any], y: dataclasses.InitVar[Any],  # pylint: disable=invalid-name
                   z: int) -> str:  # pylint: disable=invalid-name
             return f"{x} and {y} and {z}"
 
