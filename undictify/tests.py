@@ -462,9 +462,9 @@ class TestUseOnDecorated(unittest.TestCase):
     def test_double_annotating_class(self) -> None:
         """Should also error"""
         with self.assertRaises(TypeError):
-            @type_checked_constructor()  # pylint: disable=too-few-public-methods,unused-variable
             @type_checked_constructor()
-            class DoubleTypeCheckedCtor:
+            @type_checked_constructor()
+            class DoubleTypeCheckedCtor:  # pylint: disable=too-few-public-methods,unused-variable
                 """Empty dummy"""
                 pass  # pylint: disable=unnecessary-pass
 
