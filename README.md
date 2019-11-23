@@ -257,7 +257,7 @@ from undictify import type_checked_constructor
 def parse_timestamp(datetime_repr: str) -> datetime:
     return datetime.strptime(datetime_repr, '%Y-%m-%dT%H:%M:%SZ')
 
-@type_checked_constructor(converters={'some_timestamp': parse_timestamp})
+@type_checked_constructor(converters={'some_timestamp': (parse_timestamp, False)})
 @dataclass
 class Foo:
     some_timestamp: datetime
@@ -265,6 +265,10 @@ class Foo:
 json_repr = '{"some_timestamp": "2019-06-28T07:20:34Z"}'
 my_foo = Foo(**json.loads(json_repr))
 ```
+
+The second element of the converter-`bool` tuple indicates
+if this converter should only be used when actually needed to convert types (`false`)
+of it is mandatory to use it (`true`).
 
 
 Requirements and Installation

@@ -4,7 +4,7 @@ undictify - Type-checked function calls at runtime
 import inspect
 import sys
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional, Type, TypeVar, Union, get_type_hints
+from typing import Any, Callable, Dict, List, Optional, Type, TypeVar, Union, get_type_hints, Tuple
 
 VER_3_7_AND_UP = sys.version_info[:3] >= (3, 7, 0)  # PEP 560
 
@@ -18,10 +18,14 @@ else:
 
 TypeT = TypeVar('TypeT')
 
+Converters = Dict[str, Callable[[Any], Any]]
+FlaggedConverters = Dict[str, Tuple[Callable[[Any], Any], bool]]
+OptionalFlaggedConverters = Optional[FlaggedConverters]
+
 
 def type_checked_constructor(skip: bool = False,
                              convert: bool = False,
-                             converters: Optional[Dict[str, Callable[[Any], Any]]] = None) \
+                             converters: OptionalFlaggedConverters = None) \
         -> Callable[[Callable[..., TypeT]], Callable[..., TypeT]]:
     """Replaces the constructor of the given class (in-place)
     with type-checked calls."""
@@ -57,7 +61,7 @@ def type_checked_constructor(skip: bool = False,
                     kwargs_dict,
                     skip,
                     convert,
-                    converters)
+                    _optional_converters_to_converters(converters))
 
             return inner
 
@@ -79,7 +83,7 @@ def type_checked_constructor(skip: bool = False,
 
 def type_checked_call(skip: bool = False,
                       convert: bool = False,
-                      converters: Optional[Dict[str, Callable[[Any], Any]]] = None) \
+                      converters: OptionalFlaggedConverters = None) \
         -> Callable[[Callable[..., TypeT]], Callable[..., TypeT]]:
     """Wrap function with type checks."""
 
@@ -101,7 +105,7 @@ def type_checked_call(skip: bool = False,
                 kwargs_dict,
                 skip,
                 convert,
-                converters)
+                _optional_converters_to_converters(converters))
 
         setattr(wrapper, '__undictify_wrapped_func__', func)
         return wrapper
@@ -148,7 +152,7 @@ def _unpack_dict(func: WrappedOrFunc[TypeT],  # pylint: disable=too-many-argumen
                  data: Dict[str, Any],
                  skip_superfluous: bool,
                  convert_types: bool,
-                 converters: Optional[Dict[str, Callable[[Any], Any]]]) -> Any:
+                 converters: FlaggedConverters) -> Any:
     """Constructs an object in a type-safe way from a dictionary."""
 
     assert _is_dict(data), 'Argument data needs to be a dictionary.'
@@ -191,11 +195,33 @@ def _unpack_dict(func: WrappedOrFunc[TypeT],  # pylint: disable=too-many-argumen
     return _unwrap_decorator_type(func)(**call_arguments)
 
 
+def _optional_converters_to_converters(converters: OptionalFlaggedConverters) -> FlaggedConverters:
+    """Convert None to empty dictionary"""
+    if not converters:
+        return {}
+    return converters
+
+
+def _split_converters(converters: FlaggedConverters) \
+        -> Tuple[Converters, Converters]:
+    """Partition into mandatory and optional."""
+    if not converters:
+        return {}, {}
+    mandatory: Converters = {}
+    optional: Converters = {}
+    for param_name, (converter, force) in converters.items():
+        if force:
+            mandatory[param_name] = converter
+        else:
+            optional[param_name] = converter
+    return mandatory, optional
+
+
 # pylint: disable=too-many-arguments,too-many-return-statements,too-many-branches
 def _get_value(func: WrappedOrFunc[TypeT],
                value: Any, param_name: str,
                skip_superfluous: bool, convert_types: bool,
-               converters: Optional[Dict[str, Callable[[Any], Any]]]) -> Any:
+               converters: FlaggedConverters) -> Any:
     """Convert a single value into target type if possible."""
     if _is_initvar_type(func):
         return value
@@ -218,13 +244,22 @@ def _get_value(func: WrappedOrFunc[TypeT],
         raise TypeError(f'Parameter {param_name} of target function '
                         'is missing a type annotation.')
 
-    if Any not in allowed_types and param_name != 'self':
-        if not _isinstanceofone(value, allowed_types):
-            value_type = type(value)
-            if converters and param_name in converters:
-                result = converters[param_name](value)
+    mandatory_converters, optional_converters = _split_converters(converters)
+
+    if param_name != 'self':
+        value_type = type(value)
+        if mandatory_converters and param_name in mandatory_converters:
+            result = mandatory_converters[param_name](value)
+            if not _isinstanceofone(result, allowed_types):
+                raise TypeError(f'Mandatory custom conversion for {param_name} '
+                                f'yields incorrect target type: '
+                                f'{_get_type_name(type(result))}')
+            return result
+        if Any not in allowed_types and not _isinstanceofone(value, allowed_types):
+            if optional_converters and param_name in optional_converters:
+                result = optional_converters[param_name](value)
                 if not _isinstanceofone(result, allowed_types):
-                    raise TypeError(f'Custom conversion for {param_name} '
+                    raise TypeError(f'Optional custom conversion for {param_name} '
                                     f'yields incorrect target type: '
                                     f'{_get_type_name(type(result))}')
                 return result
@@ -269,7 +304,7 @@ def _string_to_bool(value: str) -> bool:
 def _get_list_value(func: Callable[..., TypeT],  # pylint: disable=too-many-arguments
                     value: Any, log_name: str,
                     skip_superfluous: bool, convert_types: bool,
-                    converters: Optional[Dict[str, Callable[[Any], Any]]]) -> Any:
+                    converters: FlaggedConverters) -> Any:
     if not _is_list_type(func) and \
             not _is_optional_list_type(func):
         raise TypeError(f'No list expected for {log_name}')
@@ -285,7 +320,7 @@ def _get_list_value(func: Callable[..., TypeT],  # pylint: disable=too-many-argu
 
 def _get_dict_value(func: Callable[..., TypeT], value: Any,
                     skip_superfluous: bool, convert_types: bool,
-                    converters: Optional[Dict[str, Callable[[Any], Any]]]) -> Any:
+                    converters: FlaggedConverters) -> Any:
     assert _is_dict(value)
     if _is_optional_type(func):
         return _get_optional_type(func)(**value)  # type: ignore

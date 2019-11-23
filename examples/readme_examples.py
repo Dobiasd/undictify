@@ -80,7 +80,7 @@ def parse_timestamp(datetime_repr: str) -> datetime:
     return datetime.strptime(datetime_repr, '%Y-%m-%dT%H:%M:%SZ')
 
 
-@type_checked_constructor(converters={'some_timestamp': parse_timestamp})
+@type_checked_constructor(converters={'some_timestamp': (parse_timestamp, False)})
 class Foo(NamedTuple):
     some_timestamp: datetime
 

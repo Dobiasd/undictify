@@ -1149,6 +1149,11 @@ def parse_timestamp(datetime_repr: str) -> datetime:
     return datetime.strptime(datetime_repr, '%b %d %Y %I:%M%p')
 
 
+def concat_changed_to_string(value: str) -> str:
+    """value + '_changed'"""
+    return value + '_changed'
+
+
 def forward_str(str_repr: str) -> str:
     """Forward string argument."""
     return str_repr
@@ -1175,18 +1180,20 @@ class HasMemberNeedingCustomConverter(NamedTuple):
 class TestCustomConverter(unittest.TestCase):
     """Sometimes pythons default conversions are not enough."""
 
-    def test_datetime_ok(self) -> None:
+    def test_datetime_ok_optional(self) -> None:
         """Valid JSON string."""
         object_repr = '{"msg": "hi", "timestamp": "Jun 1 2005  1:33PM"}'
-        obj = type_checked_call(converters={'timestamp': parse_timestamp})(NeedingCustomConverter)(
-            **json.loads(object_repr))
+        obj = type_checked_call(converters={
+            'timestamp': (parse_timestamp, False)
+        })(NeedingCustomConverter)(**json.loads(object_repr))
         self.assertEqual('hi', obj.msg)
         self.assertEqual(datetime(2005, 6, 1, 13, 33), obj.timestamp)
 
-    def test_datetime_already_converted(self) -> None:
+    def test_datetime_already_converted_optional(self) -> None:
         """Valid JSON string."""
-        obj = type_checked_call(converters={'timestamp': parse_timestamp})(NeedingCustomConverter)(
-            **{"msg": "hi", "timestamp": datetime(2005, 6, 1, 13, 33)})
+        obj = type_checked_call(converters={
+            'timestamp': (parse_timestamp, False)
+        })(NeedingCustomConverter)(**{"msg": "hi", "timestamp": datetime(2005, 6, 1, 13, 33)})
         self.assertEqual('hi', obj.msg)
         self.assertEqual(datetime(2005, 6, 1, 13, 33), obj.timestamp)
 
@@ -1194,15 +1201,53 @@ class TestCustomConverter(unittest.TestCase):
         """Custom converters shall only be applied to the outer call."""
         object_repr = '{"needs_conversion": {"msg": "hi", "timestamp": "Jun 1 2005  1:33PM"}}'
         with self.assertRaises(TypeError):
-            type_checked_call(converters={'timestamp': parse_timestamp})(
-                HasMemberNeedingCustomConverter)(**json.loads(object_repr))
+            type_checked_call(converters={
+                'timestamp': (parse_timestamp, False)
+            })(HasMemberNeedingCustomConverter)(**json.loads(object_repr))
 
-    def test_invalid_converter_result_type(self) -> None:
+    def test_invalid_converter_result_type_optional(self) -> None:
         """Valid JSON string, but incorrect converter."""
         object_repr = '{"msg": "hi", "timestamp": "Jun 1 2005  1:33PM"}'
         with self.assertRaises(TypeError):
-            type_checked_call(converters={'timestamp': forward_str})(NeedingCustomConverter)(
-                **json.loads(object_repr))
+            type_checked_call(converters={
+                'timestamp': (forward_str, False)
+            })(NeedingCustomConverter)(**json.loads(object_repr))
+
+    def test_datetime_ok_mandatory(self) -> None:
+        """Valid JSON string."""
+        object_repr = '{"msg": "hi", "timestamp": "Jun 1 2005  1:33PM"}'
+        obj = type_checked_call(converters={
+            'timestamp': (parse_timestamp, True)
+        })(NeedingCustomConverter)(**json.loads(object_repr))
+        self.assertEqual('hi', obj.msg)
+        self.assertEqual(datetime(2005, 6, 1, 13, 33), obj.timestamp)
+
+    def test_datetime_already_converted_mandatory_ok(self) -> None:
+        """Valid JSON string, but should fail."""
+        obj_unchanged = type_checked_call(converters={
+            'msg': (concat_changed_to_string, False)
+        })(NeedingCustomConverter)(**{"msg": "hi", "timestamp": datetime(2005, 6, 1, 13, 33)})
+        self.assertEqual('hi', obj_unchanged.msg)
+
+        obj_changed = type_checked_call(converters={
+            'msg': (concat_changed_to_string, True)
+        })(NeedingCustomConverter)(**{"msg": "hi", "timestamp": datetime(2005, 6, 1, 13, 33)})
+        self.assertEqual('hi_changed', obj_changed.msg)
+
+    def test_datetime_already_converted_mandatory_fail(self) -> None:
+        """Valid JSON string, but should fail."""
+        with self.assertRaises(TypeError):
+            type_checked_call(converters={
+                'timestamp': (parse_timestamp, True)
+            })(NeedingCustomConverter)(**{"msg": "hi", "timestamp": datetime(2005, 6, 1, 13, 33)})
+
+    def test_invalid_converter_result_type_mandatory(self) -> None:
+        """Valid JSON string, but incorrect converter."""
+        object_repr = '{"msg": "hi", "timestamp": "Jun 1 2005  1:33PM"}'
+        with self.assertRaises(TypeError):
+            type_checked_call(converters={
+                'timestamp': (forward_str, True)
+            })(NeedingCustomConverter)(**json.loads(object_repr))
 
 
 @type_checked_constructor()
