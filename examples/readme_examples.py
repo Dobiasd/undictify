@@ -8,7 +8,7 @@ import json
 from datetime import datetime
 from typing import List, NamedTuple, Optional, Any
 
-from undictify import type_checked_constructor
+from undictify import type_checked_constructor, optional_converter
 
 __author__ = "Tobias Hermann"
 __copyright__ = "Copyright 2018, Tobias Hermann"
@@ -80,7 +80,7 @@ def parse_timestamp(datetime_repr: str) -> datetime:
     return datetime.strptime(datetime_repr, '%Y-%m-%dT%H:%M:%SZ')
 
 
-@type_checked_constructor(converters={'some_timestamp': parse_timestamp})
+@type_checked_constructor(converters={'some_timestamp': optional_converter(parse_timestamp)})
 class Foo(NamedTuple):
     some_timestamp: datetime
 
