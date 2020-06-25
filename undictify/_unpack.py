@@ -297,7 +297,7 @@ def _get_value(func: WrappedOrFunc[TypeT],
                                     f'into type {_get_type_name(func)} '
                                     f'for key {param_name}.')
                 try:
-                    if isinstance(value, str) and func is bool:
+                    if isinstance(value, str) and func is bool:  # type: ignore
                         return _string_to_bool(value)
                     return func(value)
                 except ValueError:
@@ -374,14 +374,14 @@ def _is_initvar_type(the_type: Callable[..., TypeT]) -> bool:
     Therefore, the code below checks for both cases to support 3.7 and 3.8
     """
     if VER_3_7_AND_UP:
-        return the_type == InitVar or isinstance(the_type, InitVar)
+        return the_type == InitVar or isinstance(the_type, InitVar)  # type: ignore
     return False
 
 
 def _is_union_type(the_type: Callable[..., TypeT]) -> bool:
     """Return True if the type is a Union."""
     if VER_3_7_AND_UP:
-        return (the_type is Union or
+        return (the_type is Union or  # type: ignore
                 _is_instance(the_type, _GenericAlias) and _type_origin_is(the_type, Union))
     return _is_instance(the_type, _Union)
 
@@ -482,8 +482,10 @@ def _isinstanceofone(value: Callable[..., TypeT], types: List[Callable[..., Type
             if _isinstanceofone(value, _get_union_types(the_type)):
                 return True
         try:
-            if type(value) == the_type:  # pylint: disable=unidiomatic-typecheck
+            # pylint: disable=unidiomatic-typecheck
+            if type(value) == the_type:  # type: ignore
                 return True
+            # pylint: enable=unidiomatic-typecheck
         except TypeError:
             pass
     return False
@@ -508,7 +510,7 @@ def _is_union_of_builtins_type(the_type: Callable[..., TypeT]) -> bool:
 
 def _is_builtin_type(the_type: Callable[..., TypeT]) -> bool:
     """Return True if the type is a NoneType, str, int, float or bool."""
-    return the_type in [str, int, bool, float, type(None)]
+    return the_type in [str, int, bool, float, type(None)]  # type: ignore
 
 
 def _is_none_type(value: TypeT) -> bool:

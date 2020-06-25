@@ -194,7 +194,7 @@ class TestUnpackingFoo(unittest.TestCase):  # pylint: disable=too-many-public-me
     def do_test_additional(self, func: Callable[..., TypeT],
                            decorated: bool) -> None:
         """Valid JSON string with an additional field."""
-        object_repr = '{"val": 42, "msg": "hello", "frac": 3.14, ''' \
+        object_repr = '{"val": 42, "msg": "hello", "frac": 3.14, ' \
                       '"flag": true, "opt": 10, "ignore": 1}'
         if not decorated:
             a_foo = type_checked_call(skip=True)(func)(**json.loads(object_repr))
@@ -216,7 +216,7 @@ class TestUnpackingFoo(unittest.TestCase):  # pylint: disable=too-many-public-me
     def do_test_additional_and_convert(self, func: Callable[..., TypeT],
                                        decorated: bool) -> None:
         """Valid JSON string with an additional field and one to convert."""
-        object_repr = '{"val": "42", "msg": "hello", "frac": 3.14, ''' \
+        object_repr = '{"val": "42", "msg": "hello", "frac": 3.14, ' \
                       '"flag": true, "opt": 10, "ignore": 1}'
         if not decorated:
             a_foo = type_checked_call(skip=True, convert=True)(func)(**json.loads(object_repr))
