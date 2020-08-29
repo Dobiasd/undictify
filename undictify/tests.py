@@ -1443,6 +1443,12 @@ class TestWithEnums(unittest.TestCase):
         obj = WithIntEnum(**json.loads(object_repr))
         self.assertEqual(SomeIntEnum.BAR, obj.int_enum)
 
+    def test_int_enum_invalid(self) -> None:
+        """Invalid JSON string."""
+        object_repr = '''{"int_enum": 9999}'''
+        with self.assertRaises(TypeError):
+            WithIntEnum(**json.loads(object_repr))
+
     def test_str_enum(self) -> None:
         """Valid JSON string."""
         object_repr = '''{"str_enum": "NOTEXACTLYBAR"}'''
