@@ -2,6 +2,7 @@
 undictify - tests
 """
 
+import enum
 import json
 import pickle
 import sys
@@ -1395,3 +1396,61 @@ class TestDataClasses(unittest.TestCase):
 
         with self.assertRaises(TypeError):
             hello(**{'x': 'hello', 'y': 'world', 'z': 'twelve'})
+
+
+class SomeIntEnum(enum.Enum):
+    """An enum with int values"""
+    FOO = 1
+    BAR = 2
+
+
+class SomeAutoEnum(enum.Enum):
+    """An enum with auto values"""
+    FOO = enum.auto()
+    BAR = enum.auto()
+
+
+class SomeStrEnum(enum.Enum):
+    """An enum with str values"""
+    FOO = "FOO"
+    BAR = "NOTEXACTLYBAR"
+
+
+@type_checked_constructor()
+class WithIntEnum(NamedTuple):
+    """Some dummy class with int enum."""
+    int_enum: SomeIntEnum
+
+
+@type_checked_constructor()
+class WithStrEnum(NamedTuple):
+    """Some dummy class with str enum."""
+    str_enum: SomeStrEnum
+
+
+@type_checked_constructor()
+class WithAutoEnum(NamedTuple):
+    """Some dummy class with auto enum."""
+    auto_enum: SomeAutoEnum
+
+
+class TestWithEnums(unittest.TestCase):
+    """Enums should work too"""
+
+    def test_int_enum(self) -> None:
+        """Valid JSON string."""
+        object_repr = '''{"int_enum": 2}'''
+        obj = WithIntEnum(**json.loads(object_repr))
+        self.assertEqual(SomeIntEnum.BAR, obj.int_enum)
+
+    def test_str_enum(self) -> None:
+        """Valid JSON string."""
+        object_repr = '''{"str_enum": "NOTEXACTLYBAR"}'''
+        obj = WithStrEnum(**json.loads(object_repr))
+        self.assertEqual(SomeStrEnum.BAR, obj.str_enum)
+
+    def test_auto_enum(self) -> None:
+        """Valid JSON string."""
+        object_repr = '''{"auto_enum": ''' + str(SomeAutoEnum.FOO.value) + '''}'''
+        obj = WithAutoEnum(**json.loads(object_repr))
+        self.assertEqual(SomeAutoEnum.FOO, obj.auto_enum)

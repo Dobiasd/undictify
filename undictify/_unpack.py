@@ -1,9 +1,9 @@
 """
 undictify - Type-checked function calls at runtime
 """
+import enum
 import inspect
 import sys
-from enum import Enum
 from functools import wraps
 from typing import Any, Callable, Dict, List, Optional, Type, TypeVar, Union, get_type_hints, Tuple
 
@@ -20,7 +20,7 @@ else:
 TypeT = TypeVar('TypeT')
 
 
-class ConverterTag(Enum):
+class ConverterTag(enum.Enum):
     """When to apply a converter"""
     OPTIONAL = 1
     MANDATORY = 2
@@ -278,6 +278,11 @@ def _get_value(func: WrappedOrFunc[TypeT],
                                 f'{_get_type_name(type(result))}')
             return result
         if Any not in allowed_types and not _isinstanceofone(value, allowed_types):
+            if _is_enum_type(func):
+                for entry in func:  # type: ignore
+                    if value == entry.value:
+                        return entry
+                raise TypeError(f'Unable to instantiate {func} from {value}.')
             if optional_converters and param_name in optional_converters:
                 result = optional_converters[param_name](value)
                 if not _isinstanceofone(result, allowed_types):
@@ -300,11 +305,11 @@ def _get_value(func: WrappedOrFunc[TypeT],
                     if isinstance(value, str) and func is bool:  # type: ignore
                         return _string_to_bool(value)
                     return func(value)
-                except ValueError:
+                except ValueError as ex:
                     raise TypeError(f'Can not convert {value} '
                                     f'from type {_get_type_name(value_type)} '
                                     f'into type {_get_type_name(func)} '
-                                    f'for key {param_name}.')
+                                    f'for key {param_name}.') from ex
 
             raise TypeError(f'Key {param_name} has incorrect type: '
                             f'{_get_type_name(value_type)} instead of '
@@ -497,6 +502,14 @@ def _is_optional_type(the_type: Callable[..., TypeT]) -> bool:
         return False
     union_args = _get_union_types(the_type)
     return any(_is_none_type(union_arg) for union_arg in union_args)
+
+
+def _is_enum_type(the_type: Callable[..., TypeT]) -> bool:
+    """Return True if the type is an Enum."""
+    try:
+        return issubclass(the_type, enum.Enum)  # type: ignore
+    except TypeError:
+        return False
 
 
 def _is_union_of_builtins_type(the_type: Callable[..., TypeT]) -> bool:
