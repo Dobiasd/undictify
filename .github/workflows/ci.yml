@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python: [ 3.6, 3.7, 3.8 ]
+        python: [ 3.7, 3.8 ]
     name: python-${{ matrix.python }}
     steps:
       - name: Checkout
@@ -23,9 +23,4 @@ jobs:
           python3 -m pip install .
       - name: Test
         run: |
-          if [ "$python-version" = "3.6" ]
-          then
-            ./test/install_from_local_and_run_code_checks.sh
-          else
-            ./test/run_code_checks_3_7_and_up.sh
-          fi
+          ./test/install_from_local_and_run_code_checks.sh
