@@ -1460,3 +1460,30 @@ class TestWithEnums(unittest.TestCase):
         object_repr = '''{"auto_enum": ''' + str(SomeAutoEnum.FOO.value) + '''}'''
         obj = WithAutoEnum(**json.loads(object_repr))
         self.assertEqual(SomeAutoEnum.FOO, obj.auto_enum)
+
+
+@type_checked_constructor(convert=False, skip=False)  # pylint: disable=too-few-public-methods
+class WithOneMember(NamedTuple):
+    """Some dummy class as a NamedTuple."""
+    val: int
+
+
+@type_checked_constructor(convert=True, skip=True)  # pylint: disable=too-few-public-methods
+class WithOneMemberSkipConv(NamedTuple):
+    """Some dummy class as a NamedTuple."""
+    val: int
+
+
+class TestArgsCallsWithOneMember(unittest.TestCase):
+    """Tests function calls with positional and keywords arguments."""
+
+    def test_simple(self) -> None:
+        """Just one check to see if it works nonetheless"""
+        result = WithOneMember(val=42)
+        self.assertEqual(result.val, 42)
+
+    def test_skip_conv(self) -> None:
+        """Just one check to see if it works nonetheless"""
+        object_repr = '{"val": "42", "to_skip": "skip"}'
+        result = WithOneMemberSkipConv(**json.loads(object_repr))
+        self.assertEqual(result.val, 42)

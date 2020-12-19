@@ -2,15 +2,6 @@ version: '2.4'
 
 services:
 
-  unit-tests-3-6:
-    build:
-      context: .
-      dockerfile: test/Dockerfile_3.6
-    volumes:
-     - .:/undictify
-    working_dir: /undictify
-    entrypoint: ./test/install_from_local_and_run_code_checks.sh
-
   unit-tests-3-7:
     build:
       context: .
@@ -18,7 +9,7 @@ services:
     volumes:
      - .:/undictify
     working_dir: /undictify
-    entrypoint: ./test/install_from_local_and_run_code_checks_3_7_and_up.sh
+    entrypoint: ./test/install_from_local_and_run_code_checks.sh
 
   unit-tests-3-8:
     build:
@@ -27,4 +18,4 @@ services:
     volumes:
      - .:/undictify
     working_dir: /undictify
-    entrypoint: ./test/install_from_local_and_run_code_checks_3_7_and_up.sh
+    entrypoint: ./test/install_from_local_and_run_code_checks.sh
