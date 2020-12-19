@@ -23,7 +23,7 @@ jobs:
           python3 -m pip install .
       - name: Test
         run: |
-          if [ "python-version" = "3.6" ]
+          if [ "$python-version" = "3.6" ]
           then
             ./test/install_from_local_and_run_code_checks.sh
           else
