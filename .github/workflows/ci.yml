@@ -23,4 +23,7 @@ jobs:
           python3 -m pip install .
       - name: Test
         run: |
-          ./test/install_from_local_and_run_code_checks.sh
+          if [ "$TESTVAR" = "3.6" ]
+            ./test/install_from_local_and_run_code_checks.sh
+          else
+            ./test/run_code_checks_3_7_and_up.sh
