@@ -24,6 +24,8 @@ jobs:
       - name: Test
         run: |
           if [ "python-version" = "3.6" ]
+          then
             ./test/install_from_local_and_run_code_checks.sh
           else
             ./test/run_code_checks_3_7_and_up.sh
+          fi
