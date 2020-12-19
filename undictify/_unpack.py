@@ -3,19 +3,10 @@ undictify - Type-checked function calls at runtime
 """
 import enum
 import inspect
-import sys
+from dataclasses import InitVar, is_dataclass
 from functools import wraps
 from typing import Any, Callable, Dict, List, Optional, Type, TypeVar, Union, get_type_hints, Tuple
-
-VER_3_7_AND_UP = sys.version_info[:3] >= (3, 7, 0)  # PEP 560
-
-# pylint: disable=no-name-in-module,ungrouped-imports,import-error
-if VER_3_7_AND_UP:
-    from typing import _GenericAlias  # type: ignore
-    from dataclasses import InitVar, is_dataclass
-else:
-    from typing import _Union  # type: ignore
-# pylint: enable=no-name-in-module,ungrouped-imports,import-error
+from typing import _GenericAlias  # type: ignore
 
 TypeT = TypeVar('TypeT')
 
@@ -92,7 +83,7 @@ def type_checked_constructor(skip: bool = False,
             func.__new__ = wrapper(func.__new__, signature_new)  # type: ignore
         else:
             func.__init__ = wrapper(func.__init__, _get_signature(func.__init__))  # type: ignore
-            if _is_dataclass(func) and hasattr(func, '__post_init__'):
+            if is_dataclass(func) and hasattr(func, '__post_init__'):
                 func.__post_init__ = wrapper(func.__post_init__,  # type: ignore
                                              _get_signature(func.__post_init__))  # type: ignore
         setattr(func, '__undictify_wrapped_func__', func)
@@ -378,26 +369,20 @@ def _is_initvar_type(the_type: Callable[..., TypeT]) -> bool:
 
     Therefore, the code below checks for both cases to support 3.7 and 3.8
     """
-    if VER_3_7_AND_UP:
-        return the_type == InitVar or isinstance(the_type, InitVar)  # type: ignore
-    return False
+    return the_type == InitVar or isinstance(the_type, InitVar)  # type: ignore
 
 
 def _is_union_type(the_type: Callable[..., TypeT]) -> bool:
     """Return True if the type is a Union."""
-    if VER_3_7_AND_UP:
-        return (the_type is Union or  # type: ignore
-                _is_instance(the_type, _GenericAlias) and _type_origin_is(the_type, Union))
-    return _is_instance(the_type, _Union)
+    return (the_type is Union or  # type: ignore
+            _is_instance(the_type, _GenericAlias) and _type_origin_is(the_type, Union))
 
 
 def _is_list_type(the_type: Callable[..., TypeT]) -> bool:
     """Return True if the type is a List."""
     try:
-        if VER_3_7_AND_UP:
-            return _is_instance(the_type,
-                                _GenericAlias) and _type_origin_is(the_type, list)
-        return issubclass(the_type, List)  # type: ignore
+        return _is_instance(the_type,
+                            _GenericAlias) and _type_origin_is(the_type, list)
     except TypeError:
         return False
 
@@ -415,10 +400,8 @@ def _is_optional_list_type(the_type: Callable[..., TypeT]) -> bool:
 def _is_dict_type(the_type: Callable[..., TypeT]) -> bool:
     """Return True if the type is a Dict."""
     try:
-        if VER_3_7_AND_UP:
-            return _is_instance(the_type,
-                                _GenericAlias) and _type_origin_is(the_type, dict)
-        return issubclass(the_type, Dict)  # type: ignore
+        return _is_instance(the_type,
+                            _GenericAlias) and _type_origin_is(the_type, dict)
     except TypeError:
         return False
 
@@ -529,13 +512,6 @@ def _is_builtin_type(the_type: Callable[..., TypeT]) -> bool:
 def _is_none_type(value: TypeT) -> bool:
     """Return True if the value is of NoneType."""
     return value is type(None)
-
-
-def _is_dataclass(value: TypeT) -> bool:
-    """Return True if the value is a dataclass"""
-    if VER_3_7_AND_UP:
-        return is_dataclass(value)
-    return False
 
 
 def _is_dict(value: TypeT) -> bool:

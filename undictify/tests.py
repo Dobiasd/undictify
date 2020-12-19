@@ -1,11 +1,10 @@
 """
 undictify - tests
 """
-
+import dataclasses
 import enum
 import json
 import pickle
-import sys
 import unittest
 from datetime import datetime
 from typing import Any, Callable, Dict, List, NamedTuple, Optional, Union, Tuple
@@ -15,11 +14,6 @@ from ._unpack import optional_converter, mandatory_converter
 from ._unpack import type_checked_call, type_checked_constructor
 
 TypeT = TypeVar('TypeT')
-
-VER_3_7_AND_UP = sys.version_info[:3] >= (3, 7, 0)  # PEP 560
-
-if VER_3_7_AND_UP:
-    import dataclasses  # pylint: disable=import-error
 
 
 # pylint: disable=too-many-lines
@@ -1284,8 +1278,6 @@ class TestOptionalUnion(unittest.TestCase):
         self.assertEqual('foo', obj.name)
 
 
-@unittest.skipIf(not VER_3_7_AND_UP,
-                 "Python version is not high enough")
 class TestDataClasses(unittest.TestCase):
     """Tests that data classes work as expected"""
 
