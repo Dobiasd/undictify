@@ -19,3 +19,12 @@ services:
      - .:/undictify
     working_dir: /undictify
     entrypoint: ./test/install_from_local_and_run_code_checks.sh
+
+  unit-tests-3-9:
+    build:
+      context: .
+      dockerfile: test/Dockerfile_3.9
+    volumes:
+     - .:/undictify
+    working_dir: /undictify
+    entrypoint: ./test/install_from_local_and_run_code_checks.sh
