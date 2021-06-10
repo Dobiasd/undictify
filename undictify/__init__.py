@@ -1,4 +1,7 @@
-from ._unpack import type_checked_call, type_checked_constructor, optional_converter, mandatory_converter
+from ._unpack import mandatory_converter as mandatory_converter
+from ._unpack import optional_converter as optional_converter
+from ._unpack import type_checked_call as type_checked_call
+from ._unpack import type_checked_constructor as type_checked_constructor
 
 name = "undictify"
 
