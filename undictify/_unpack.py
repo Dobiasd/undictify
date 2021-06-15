@@ -1,6 +1,7 @@
 """
 undictify - Type-checked function calls at runtime
 """
+import collections
 import enum
 import inspect
 from dataclasses import InitVar, is_dataclass
@@ -323,8 +324,8 @@ def _get_list_value(func: Callable[..., TypeT],  # pylint: disable=too-many-argu
                     value: Any, log_name: str,
                     skip_superfluous: bool, convert_types: bool,
                     converters: TaggedConverters) -> Any:
-    if not _is_list_type(func) and \
-            not _is_optional_list_type(func):
+    if not _is_list_ish_type(func) and \
+            not _is_optional_list_ish_type(func):
         raise TypeError(f'No list expected for {log_name}')
     result = []
     result_elem_type = _get_list_type_elem_type(func)
@@ -378,21 +379,23 @@ def _is_union_type(the_type: Callable[..., TypeT]) -> bool:
             _is_instance(the_type, _GenericAlias) and _type_origin_is(the_type, Union))
 
 
-def _is_list_type(the_type: Callable[..., TypeT]) -> bool:
+def _is_list_ish_type(the_type: Callable[..., TypeT]) -> bool:
     """Return True if the type is a List."""
     try:
-        return _is_instance(the_type,
-                            _GenericAlias) and _type_origin_is(the_type, list)
+        return (_is_instance(the_type, _GenericAlias) and
+                _type_origin_is(the_type, list) or
+                _is_instance(the_type, _GenericAlias) and
+                _type_origin_is(the_type, collections.abc.Sequence))  # type: ignore
     except TypeError:
         return False
 
 
-def _is_optional_list_type(the_type: Callable[..., TypeT]) -> bool:
+def _is_optional_list_ish_type(the_type: Callable[..., TypeT]) -> bool:
     """Return True if the type is a Optional[List]."""
-    if _is_list_type(the_type):
+    if _is_list_ish_type(the_type):
         return True
     if _is_optional_type(the_type) and \
-            _is_list_type(_get_optional_type(the_type)):
+            _is_list_ish_type(_get_optional_type(the_type)):
         return True
     return False
 
@@ -448,7 +451,7 @@ def _get_type_name(the_type: Callable[..., TypeT]) -> str:
     if _is_union_type(the_type):
         union_type_names = [t.__name__ for t in _get_union_types(the_type)]
         return f'Union[{", ".join(union_type_names)}]'
-    if _is_list_type(the_type):
+    if _is_list_ish_type(the_type):
         return f'List[{str(_get_list_type_elem_type(the_type).__name__)}]'
     return the_type.__name__
 
@@ -457,7 +460,7 @@ def _get_list_type_elem_type(list_type: Callable[..., TypeT]) -> Callable[..., A
     """Return the type of a single element of the list type."""
     if _is_optional_type(list_type):
         list_type = _get_optional_type(list_type)
-    assert _is_list_type(list_type)
+    assert _is_list_ish_type(list_type)
     list_args = list_type.__args__  # type: ignore
     assert len(list_args) == 1
     return list_args[0]  # type: ignore

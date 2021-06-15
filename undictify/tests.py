@@ -7,7 +7,7 @@ import json
 import pickle
 import unittest
 from datetime import datetime
-from typing import Any, Callable, Dict, List, NamedTuple, Optional, Union, Tuple
+from typing import Any, Callable, Dict, List, NamedTuple, Optional, Union, Tuple, Sequence
 from typing import TypeVar
 
 from ._unpack import optional_converter, mandatory_converter
@@ -1479,3 +1479,18 @@ class TestArgsCallsWithOneMember(unittest.TestCase):
         object_repr = '{"val": "42", "to_skip": "skip"}'
         result = WithOneMemberSkipConv(**json.loads(object_repr))
         self.assertEqual(result.val, 42)
+
+
+@type_checked_constructor(convert=True)  # pylint: disable=too-few-public-methods
+class WithSequenceMember(NamedTuple):
+    """Some dummy class as a NamedTuple."""
+    val: Sequence[int]
+
+
+class TestListsAndSequences(unittest.TestCase):
+    """Tests conversions."""
+
+    def test_list_to_sequence(self) -> None:
+        """Should work."""
+        result = WithSequenceMember(val=[1, 2])
+        self.assertEqual(result.val, [1, 2])
