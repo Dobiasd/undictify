@@ -11,9 +11,9 @@ jobs:
     name: python-${{ matrix.python }}
     steps:
       - name: Checkout
-        uses: actions/checkout@master
+        uses: actions/checkout@main
       - name: Setup python-${{ matrix.python }}
-        uses: actions/setup-python@master
+        uses: actions/setup-python@main
         with:
           python-version: ${{ matrix.python }}
       - name: Install Tools
