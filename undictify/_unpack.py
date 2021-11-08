@@ -385,7 +385,7 @@ def _is_list_ish_type(the_type: Callable[..., TypeT]) -> bool:
         return (_is_instance(the_type, _GenericAlias) and
                 _type_origin_is(the_type, list) or
                 _is_instance(the_type, _GenericAlias) and
-                _type_origin_is(the_type, collections.abc.Sequence))  # type: ignore
+                _type_origin_is(the_type, collections.abc.Sequence))
     except TypeError:
         return False
 
