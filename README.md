@@ -251,7 +251,7 @@ import json
 from dataclasses import dataclass
 from datetime import datetime
 
-from undictify import type_checked_constructor
+from undictify import type_checked_constructor, optional_converter
 
 def parse_timestamp(datetime_repr: str) -> datetime:
     return datetime.strptime(datetime_repr, '%Y-%m-%dT%H:%M:%SZ')
