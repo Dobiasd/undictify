@@ -83,10 +83,10 @@ def type_checked_constructor(skip: bool = False,
         if signature_new_param_names != ['args', 'kwargs']:
             func.__new__ = wrapper(func.__new__, signature_new)  # type: ignore
         else:
-            func.__init__ = wrapper(func.__init__, _get_signature(func.__init__))  # type: ignore
+            func.__init__ = wrapper(func.__init__, _get_signature(func.__init__))
             if is_dataclass(func) and hasattr(func, '__post_init__'):
-                func.__post_init__ = wrapper(func.__post_init__,  # type: ignore
-                                             _get_signature(func.__post_init__))  # type: ignore
+                func.__post_init__ = wrapper(func.__post_init__,
+                                             _get_signature(func.__post_init__))
         setattr(func, '__undictify_wrapped_func__', func)
         return func
 
@@ -254,7 +254,7 @@ def _get_value(func: WrappedOrFunc[TypeT],
         if _is_optional_type(func) or _is_union_type(func) \
         else [func]))
 
-    if func is inspect.Parameter.empty and param_name != 'self':
+    if func is inspect.Parameter.empty and param_name != 'self':  # type: ignore
         raise TypeError(f'Parameter {param_name} of target function '
                         'is missing a type annotation.')
 
@@ -342,7 +342,7 @@ def _get_dict_value(func: Callable[..., TypeT], value: Any,
                     converters: TaggedConverters) -> Any:
     assert _is_dict(value)
     if _is_optional_type(func):
-        return _get_optional_type(func)(**value)  # type: ignore
+        return _get_optional_type(func)(**value)
     if _is_dict_type(func):
         key_type = _get_dict_key_type(func)
         value_type = _get_dict_value_type(func)
