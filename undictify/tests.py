@@ -1426,6 +1426,24 @@ class WithAutoEnum(NamedTuple):
     auto_enum: SomeAutoEnum
 
 
+@type_checked_constructor()
+class WithOptionalIntEnum(NamedTuple):
+    """Some dummy class with int enum."""
+    int_enum: Optional[SomeIntEnum]
+
+
+@type_checked_constructor()
+class WithOptionalStrEnum(NamedTuple):
+    """Some dummy class with str enum."""
+    str_enum: Optional[SomeStrEnum]
+
+
+@type_checked_constructor()
+class WithOptionalAutoEnum(NamedTuple):
+    """Some dummy class with auto enum."""
+    auto_enum: Optional[SomeAutoEnum]
+
+
 class TestWithEnums(unittest.TestCase):
     """Enums should work too"""
 
@@ -1451,6 +1469,24 @@ class TestWithEnums(unittest.TestCase):
         """Valid JSON string."""
         object_repr = '''{"auto_enum": ''' + str(SomeAutoEnum.FOO.value) + '''}'''
         obj = WithAutoEnum(**json.loads(object_repr))
+        self.assertEqual(SomeAutoEnum.FOO, obj.auto_enum)
+
+    def test_optional_int_enum(self) -> None:
+        """Valid JSON string."""
+        object_repr = '''{"int_enum": 2}'''
+        obj = WithOptionalIntEnum(**json.loads(object_repr))
+        self.assertEqual(SomeIntEnum.BAR, obj.int_enum)
+
+    def test_optional_str_enum(self) -> None:
+        """Valid JSON string."""
+        object_repr = '''{"str_enum": "NOTEXACTLYBAR"}'''
+        obj = WithOptionalStrEnum(**json.loads(object_repr))
+        self.assertEqual(SomeStrEnum.BAR, obj.str_enum)
+
+    def test_optional_auto_enum(self) -> None:
+        """Valid JSON string."""
+        object_repr = '''{"auto_enum": ''' + str(SomeAutoEnum.FOO.value) + '''}'''
+        obj = WithOptionalAutoEnum(**json.loads(object_repr))
         self.assertEqual(SomeAutoEnum.FOO, obj.auto_enum)
 
 
