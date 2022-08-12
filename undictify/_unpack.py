@@ -396,7 +396,7 @@ def _is_list_ish_type(the_type: Callable[..., TypeT]) -> bool:
 
 
 def _is_optional_list_ish_type(the_type: Callable[..., TypeT]) -> bool:
-    """Return True if the type is a Optional[List]."""
+    """Return True if the type is an Optional[List]."""
     if _is_list_ish_type(the_type):
         return True
     if _is_optional_type(the_type) and \
@@ -509,7 +509,7 @@ def _is_optional_enum_type(the_type: Callable[..., TypeT]) -> bool:
 
 
 def _is_union_of_builtins_type(the_type: Callable[..., TypeT]) -> bool:
-    """Return True if the type is an Union only made of
+    """Return True if the type is a Union only made of
     None, str, int, float and bool."""
     if not _is_union_type(the_type):
         return False
