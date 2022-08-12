@@ -1477,7 +1477,7 @@ class TestWithEnums(unittest.TestCase):
         obj = WithOptionalIntEnum(**json.loads(object_repr))
         self.assertEqual(SomeIntEnum.BAR, obj.int_enum)
 
-    def test_optional_int_enum_None(self) -> None:
+    def test_optional_int_enum_null(self) -> None:
         """Valid JSON string with null."""
         object_repr = '''{"int_enum": null}'''
         obj = WithOptionalIntEnum(**json.loads(object_repr))
