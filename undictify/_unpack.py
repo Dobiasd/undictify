@@ -336,7 +336,7 @@ def _get_list_value(func: Callable[..., TypeT],  # pylint: disable=too-many-argu
     result_elem_type = _get_list_type_elem_type(func)
     for elem in value:
         result.append(_get_value(result_elem_type,
-                                 elem, value,
+                                 elem, log_name,
                                  skip_superfluous, convert_types,
                                  converters))
     return result
