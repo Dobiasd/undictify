@@ -14,6 +14,7 @@ setuptools.setup(
     url="http://github.com/Dobiasd/undictify",
     package_data={"undictify": ["py.typed"]},
     packages=["undictify"],
+    python_requires=">=3.7",
     classifiers=(
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
