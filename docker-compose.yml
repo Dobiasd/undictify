@@ -37,3 +37,21 @@ services:
      - .:/undictify
     working_dir: /undictify
     entrypoint: ./test/install_from_local_and_run_code_checks.sh
+
+  unit-tests-3-11:
+    build:
+      context: .
+      dockerfile: test/Dockerfile_3.11
+    volumes:
+     - .:/undictify
+    working_dir: /undictify
+    entrypoint: ./test/install_from_local_and_run_code_checks.sh
+
+  unit-tests-3-12:
+    build:
+      context: .
+      dockerfile: test/Dockerfile_3.12
+    volumes:
+      - .:/undictify
+    working_dir: /undictify
+    entrypoint: ./test/install_from_local_and_run_code_checks.sh
