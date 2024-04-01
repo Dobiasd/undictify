@@ -254,7 +254,7 @@ def _get_value(func: WrappedOrFunc[TypeT],
         if _is_optional_type(func) or _is_union_type(func) \
         else [func]))
 
-    if func is inspect.Parameter.empty and param_name != 'self':  # type: ignore
+    if func is inspect.Parameter.empty and param_name != 'self':
         raise TypeError(f'Parameter {param_name} of target function '
                         'is missing a type annotation.')
 
@@ -299,7 +299,7 @@ def _get_value(func: WrappedOrFunc[TypeT],
                                     f'into type {_get_type_name(func)} '
                                     f'for key {param_name}.')
                 try:
-                    if isinstance(value, str) and func is bool:  # type: ignore
+                    if isinstance(value, str) and func is bool:
                         return _string_to_bool(value)
                     return func(value)
                 except ValueError as ex:
@@ -375,7 +375,7 @@ def _is_initvar_type(the_type: Callable[..., TypeT]) -> bool:
 
     Therefore, the code below checks for both cases to support 3.7 and 3.8
     """
-    return the_type == InitVar or isinstance(the_type, InitVar)  # type: ignore
+    return the_type == InitVar or isinstance(the_type, InitVar)
 
 
 def _is_union_type(the_type: Callable[..., TypeT]) -> bool:
@@ -416,7 +416,7 @@ def _is_dict_type(the_type: Callable[..., TypeT]) -> bool:
 
 def _type_origin_is(the_type: Callable[..., TypeT], origin: Any) -> bool:
     assert hasattr(the_type, '__origin__')
-    return the_type.__origin__ is origin  # type: ignore
+    return the_type.__origin__ is origin
 
 
 def _get_union_types(union_type: Callable[..., TypeT]) -> List[Callable[..., TypeT]]:
@@ -478,10 +478,8 @@ def _isinstanceofone(value: Callable[..., TypeT], types: List[Callable[..., Type
             if _isinstanceofone(value, _get_union_types(the_type)):
                 return True
         try:
-            # pylint: disable=unidiomatic-typecheck
-            if type(value) == the_type:  # type: ignore
+            if type(value) == the_type:  # pylint: disable=unidiomatic-typecheck
                 return True
-            # pylint: enable=unidiomatic-typecheck
         except TypeError:
             pass
     return False
