@@ -269,7 +269,7 @@ def _get_value(func: WrappedOrFunc[TypeT],
                                 f'yields incorrect target type: '
                                 f'{_get_type_name(type(result))}')
             return result
-        if Any not in allowed_types and not _isinstanceofone(value, allowed_types):
+        if Any not in allowed_types and not _isinstanceofone(value, allowed_types):  # type: ignore
             if _is_enum_type(func):
                 for entry in func:  # type: ignore
                     if value == entry.value:
@@ -360,7 +360,7 @@ def _get_dict_value(func: Callable[..., TypeT], value: Any,
                            skip_superfluous, convert_types,
                            converters)
         return typed_dict
-    if func is Any:
+    if func is Any:  # type: ignore
         return value
     return func(**value)
 
@@ -517,7 +517,7 @@ def _is_union_of_builtins_type(the_type: Callable[..., TypeT]) -> bool:
 
 def _is_builtin_type(the_type: Callable[..., TypeT]) -> bool:
     """Return True if the type is a NoneType, str, int, float or bool."""
-    return the_type in [str, int, bool, float, type(None)]  # type: ignore
+    return the_type in [str, int, bool, float, type(None)]
 
 
 def _is_none_type(value: TypeT) -> bool:

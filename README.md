@@ -273,7 +273,7 @@ instead of `optional_converter`.
 Requirements and Installation
 -----------------------------
 
-You need Python 3.7 or higher.
+You need Python 3.8 or higher.
 
 ```bash
 python3 -m pip install undictify
